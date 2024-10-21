@@ -1,0 +1,42 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // or "postgresql" or "mysql" depending on your database
+  url      = "file:./dev.db" // change the connection string according to your setup
+}
+
+// User schema
+model User {
+  id              String           @id @default(cuid())
+  subdomain       String           @unique
+  username        String           @unique
+  websocketEvents WebsocketEvent[]
+  webhookTargets  WebhookTarget[]
+}
+
+// WebSocket Event schema
+model WebsocketEvent {
+  id        String   @id @default(cuid())
+  event     String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+}
+
+// Webhook Relay Target schema
+model WebhookTarget {
+  id       String  @id @default(cuid())
+  user     User    @relation(fields: [userId], references: [id])
+  userId   String
+  nickname String?
+  active   Boolean @default(true)
+}
