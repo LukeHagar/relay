@@ -1,0 +1,30 @@
+<script>
+  function startWebsocket() {
+
+      var ws
+    try {
+        ws = new WebSocket("ws://${url.host}/api/relay");
+    }catch (e) {
+        setTimeout(startWebsocket, 10);
+    }
+  
+
+    ws.onmessage = function (event) {
+      console.log(JSON.parse(event.data));
+    };
+
+    ws.onclose = function (event) {
+      // connection closed, discard old websocket and create a new one in 5s
+      ws = null;
+      setTimeout(startWebsocket, 10);
+    };
+  }
+
+  startWebsocket();
+</script>
+
+<h1>WebSocket Session</h1>
+
+<p>This is a WebSocket session.</p>
+
+<p>Open JavaScript console to see messages.</p>

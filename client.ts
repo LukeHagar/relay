@@ -52,7 +52,7 @@ async function sendHttpEvent(user: { username: string; subdomain: string }) {
 }
 
 // Create WebSocket connections and send HTTP events
-(async function main() {
+async function main() {
   const websockets = users.map((user) =>
     createWebSocketConnection(user.subdomain)
   );
@@ -66,4 +66,6 @@ async function sendHttpEvent(user: { username: string; subdomain: string }) {
 
   // Optionally close the connections after sending events
   websockets.forEach((ws) => ws.close());
-})();
+}
+
+setTimeout(main, 1000);

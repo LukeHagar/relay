@@ -2,6 +2,9 @@
   "name": "baton",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "dev": "bun run --watch server/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "prisma": "^5.21.1"
@@ -10,6 +13,10 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@prisma/client": "5.21.1"
+    "@auth/core": "^0.37.2",
+    "@auth/prisma-adapter": "^2.7.2",
+    "@hono/auth-js": "^1.0.12",
+    "@prisma/client": "5.21.1",
+    "hono": "^4.6.6"
   }
 }
