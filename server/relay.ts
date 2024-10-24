@@ -24,10 +24,12 @@ relay.get("/", (c) => {
   const sessionToken = getCookie(c, "authjs.session-token");
 
   if (!sessionToken) {
-    return c.redirect("/api/auth/signin");
+    return new Response('Server is up and running!', {
+      status: 200
+    })
   } else {
     setCookie(c, "authjs.session-token", sessionToken);
-    return c.redirect("http://localhost:5173");
+    return c.redirect(process.env.REDIRECT_URL!);
   }
 });
 
