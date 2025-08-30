@@ -1,0 +1,19 @@
+{
+	"/": [
+		"src/routes/+layout.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/api/auth/[...auth]": [
+		"src/routes/api/auth/[...auth]/+server.ts"
+	],
+	"/api/ws-token": [
+		"src/routes/api/ws-token/+server.ts"
+	],
+	"/app": [
+		"src/routes/app/+page.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/ingest": [
+		"src/routes/ingest/+server.ts"
+	]
+}
