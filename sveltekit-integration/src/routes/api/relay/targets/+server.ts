@@ -9,26 +9,26 @@ const createTargetSchema = z.object({
 	nickname: z.string().optional()
 });
 
-export const GET: RequestHandler = async ({ locals }) => {
-	const session = await locals.auth();
+export const GET: RequestHandler = async (event) => {
+	const session = await event.locals.auth();
 	
 	if (!session?.user?.id) {
-		throw error(401, 'Unauthorized');
+		error(401, 'Unauthorized');
 	}
 
 	const targets = await getRelayTargets(session.user.id);
 	return json(targets);
 };
 
-export const POST: RequestHandler = async ({ request, locals }) => {
-	const session = await locals.auth();
+export const POST: RequestHandler = async (event) => {
+	const session = await event.locals.auth();
 	
 	if (!session?.user?.id) {
-		throw error(401, 'Unauthorized');
+		error(401, 'Unauthorized');
 	}
 
 	try {
-		const body = await request.json();
+		const body = await event.request.json();
 		const { target, nickname } = createTargetSchema.parse(body);
 
 		const newTarget = await createRelayTarget(session.user.id, target, nickname);
@@ -36,21 +36,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json(newTarget, { status: 201 });
 	} catch (err) {
 		if (err instanceof z.ZodError) {
-			throw error(400, err.errors[0].message);
+			error(400, err.errors[0].message);
 		}
-		throw error(500, 'Failed to create relay target');
+		error(500, 'Failed to create relay target');
 	}
 };
 
-export const DELETE: RequestHandler = async ({ request, locals }) => {
-	const session = await locals.auth();
+export const DELETE: RequestHandler = async (event) => {
+	const session = await event.locals.auth();
 	
 	if (!session?.user?.id) {
-		throw error(401, 'Unauthorized');
+		error(401, 'Unauthorized');
 	}
 
 	try {
-		const { targetId } = await request.json();
+		const { targetId } = await event.request.json();
 		
 		const target = await prisma.relayTarget.findFirst({
 			where: {
@@ -60,7 +60,7 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		});
 
 		if (!target) {
-			throw error(404, 'Relay target not found');
+			error(404, 'Relay target not found');
 		}
 
 		await prisma.relayTarget.update({
@@ -70,6 +70,6 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 
 		return json({ success: true });
 	} catch (err) {
-		throw error(500, 'Failed to delete relay target');
+		error(500, 'Failed to delete relay target');
 	}
 };

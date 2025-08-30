@@ -1,18 +1,23 @@
 <script lang="ts">
-	import type { WebhookEvent } from '$lib/stores/webhooks';
+	import type { WebhookEvent } from '$stores/webhooks';
 	
-	export let event: WebhookEvent;
+	interface Props {
+		event: WebhookEvent;
+	}
 	
-	$: formattedTime = new Date(event.createdAt).toLocaleString();
-	$: methodColor = getMethodColor(event.method);
+	let { event }: Props = $props();
+	
+	// Svelte 5 derived state using runes
+	let formattedTime = $derived(new Date(event.createdAt).toLocaleString());
+	let methodColor = $derived(getMethodColor(event.method));
 	
 	function getMethodColor(method: string) {
 		switch (method.toLowerCase()) {
-			case 'get': return 'bg-green-100 text-green-800';
-			case 'post': return 'bg-blue-100 text-blue-800';
-			case 'put': return 'bg-yellow-100 text-yellow-800';
-			case 'patch': return 'bg-orange-100 text-orange-800';
-			case 'delete': return 'bg-red-100 text-red-800';
+			case 'get': return 'bg-success-100 text-success-800';
+			case 'post': return 'bg-primary-100 text-primary-800';
+			case 'put': return 'bg-warning-100 text-warning-800';
+			case 'patch': return 'bg-warning-100 text-warning-700';
+			case 'delete': return 'bg-danger-100 text-danger-800';
 			default: return 'bg-gray-100 text-gray-800';
 		}
 	}
@@ -25,7 +30,7 @@
 		}
 	}
 	
-	let expanded = false;
+	let expanded = $state(false);
 </script>
 
 <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -41,10 +46,10 @@
 		</div>
 		<div class="flex items-center space-x-2">
 			<span class="text-xs text-gray-500">{formattedTime}</span>
-			<button 
-				on:click={() => expanded = !expanded}
-				class="text-gray-400 hover:text-gray-600"
-			>
+					<button 
+			onclick={() => expanded = !expanded}
+			class="text-gray-400 hover:text-gray-600 transition-colors"
+		>
 				<svg 
 					class="w-4 h-4 transition-transform" 
 					class:rotate-180={expanded}

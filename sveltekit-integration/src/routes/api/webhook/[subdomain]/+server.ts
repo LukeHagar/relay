@@ -3,7 +3,8 @@ import type { RequestHandler } from './$types';
 import { prisma } from '$db';
 import { broadcastToUser, forwardToRelayTargets } from '$lib/server/relay';
 
-export const POST: RequestHandler = async ({ request, params, url }) => {
+export const POST: RequestHandler = async (event) => {
+	const { request, params, url } = event;
 	const { subdomain } = params;
 	
 	if (!subdomain) {
@@ -138,11 +139,13 @@ export const POST: RequestHandler = async ({ request, params, url }) => {
 };
 
 // Handle other HTTP methods
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async (event) => {
+	const { params } = event;
 	return json({ 
 		message: `Webhook endpoint for ${params.subdomain}`,
-		methods: ['POST'],
-		timestamp: new Date().toISOString()
+		methods: ['POST', 'PUT', 'PATCH', 'DELETE'],
+		timestamp: new Date().toISOString(),
+		version: '2.0'
 	});
 };
 

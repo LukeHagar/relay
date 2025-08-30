@@ -1,11 +1,25 @@
 <script lang="ts">
-	import { webhookEvents, isLoading } from '$lib/stores/webhooks';
-	import WebhookEventCard from '$lib/components/WebhookEventCard.svelte';
-	import WebSocketStatus from '$lib/components/WebSocketStatus.svelte';
+	import { webhookStore } from '$stores/webhooks';
+	import WebhookEventCard from '$components/WebhookEventCard.svelte';
+	import WebSocketStatus from '$components/WebSocketStatus.svelte';
 	
-	export let data;
+	interface Props {
+		data: {
+			session?: {
+				user?: {
+					id: string;
+					name?: string;
+					email?: string;
+					image?: string;
+					subdomain?: string;
+					username?: string;
+				};
+			};
+		};
+	}
 	
-	$: user = data.session?.user;
+	let { data }: Props = $props();
+	let user = $derived(data.session?.user);
 </script>
 
 <svelte:head>
@@ -40,12 +54,12 @@
 							<code class="text-sm text-gray-800">
 								POST https://yourdomain.com/api/webhook/{user?.subdomain}
 							</code>
-							<button 
-								on:click={() => navigator.clipboard.writeText(`https://yourdomain.com/api/webhook/${user?.subdomain}`)}
-								class="text-xs text-blue-600 hover:text-blue-500"
-							>
-								Copy
-							</button>
+											<button 
+					onclick={() => navigator.clipboard.writeText(`https://yourdomain.com/api/webhook/${user?.subdomain}`)}
+					class="text-xs text-primary-600 hover:text-primary-500 transition-colors"
+				>
+					Copy
+				</button>
 						</div>
 					</div>
 					<p class="text-sm text-gray-500">
@@ -63,7 +77,7 @@
 					Test Your Webhook
 				</h3>
 				<button 
-					on:click={async () => {
+					onclick={async () => {
 						try {
 							await fetch(`/api/webhook/${user?.subdomain}`, {
 								method: 'POST',
@@ -78,7 +92,7 @@
 							console.error('Failed to send test webhook:', error);
 						}
 					}}
-					class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+					class="btn-primary"
 				>
 					Send Test Webhook
 				</button>
@@ -89,16 +103,16 @@
 		<div class="bg-white shadow rounded-lg">
 			<div class="px-4 py-5 sm:p-6">
 				<h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-					Event History ({$webhookEvents.length})
+					Event History ({webhookStore.totalEvents})
 				</h3>
 				
-				{#if $isLoading}
+				{#if webhookStore.loading}
 					<div class="flex justify-center py-8">
-						<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+						<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
 					</div>
-				{:else if $webhookEvents.length > 0}
-					<div class="space-y-4 max-h-96 overflow-y-auto">
-						{#each $webhookEvents as event (event.id)}
+				{:else if webhookStore.events.length > 0}
+					<div class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+						{#each webhookStore.events as event (event.id)}
 							<WebhookEventCard {event} />
 						{/each}
 					</div>

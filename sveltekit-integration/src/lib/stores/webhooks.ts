@@ -1,4 +1,3 @@
-import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 
 export interface WebhookEvent {
@@ -20,20 +19,45 @@ export interface RelayTarget {
 	createdAt: string;
 }
 
-// Stores
-export const webhookEvents = writable<WebhookEvent[]>([]);
-export const relayTargets = writable<RelayTarget[]>([]);
-export const connectionStatus = writable<'connected' | 'disconnected' | 'connecting'>('disconnected');
-export const isLoading = writable(false);
+// Svelte 5 runes for reactive state
+let webhookEvents = $state<WebhookEvent[]>([]);
+let relayTargets = $state<RelayTarget[]>([]);
+let connectionStatus = $state<'connected' | 'disconnected' | 'connecting'>('disconnected');
+let isLoading = $state(false);
 
-// Derived stores
-export const activeTargets = derived(relayTargets, $targets => 
-	$targets.filter(target => target.active)
-);
-
-export const recentEvents = derived(webhookEvents, $events => 
-	$events.slice(0, 10)
-);
+// Derived state using Svelte 5 runes
+export const webhookStore = {
+	// Reactive getters
+	get events() { return webhookEvents; },
+	get targets() { return relayTargets; },
+	get status() { return connectionStatus; },
+	get loading() { return isLoading; },
+	
+	// Derived values
+	get activeTargets() { 
+		return relayTargets.filter(target => target.active); 
+	},
+	get recentEvents() { 
+		return webhookEvents.slice(0, 10); 
+	},
+	get totalEvents() {
+		return webhookEvents.length;
+	},
+	
+	// State setters
+	setEvents: (events: WebhookEvent[]) => { webhookEvents = events; },
+	addEvent: (event: WebhookEvent) => { 
+		webhookEvents = [event, ...webhookEvents].slice(0, 100); 
+	},
+	setTargets: (targets: RelayTarget[]) => { relayTargets = targets; },
+	addTarget: (target: RelayTarget) => { 
+		relayTargets = [...relayTargets, target]; 
+	},
+	removeTarget: (targetId: string) => {
+		relayTargets = relayTargets.filter(t => t.id !== targetId);
+	},
+	setStatus: (status: typeof connectionStatus) => { connectionStatus = status; },
+	setLoading: (loading: boolean) => { isLoading = loading; },
 
 // WebSocket Connection management
 let websocket: WebSocket | null = null;
@@ -45,7 +69,7 @@ export const webhookStore = {
 	connect: async () => {
 		if (!browser) return;
 		
-		connectionStatus.set('connecting');
+		connectionStatus = 'connecting';
 		
 		// Create WebSocket connection to separate WebSocket server
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -59,7 +83,7 @@ export const webhookStore = {
 
 		if (!sessionToken) {
 			console.error('No session token found');
-			connectionStatus.set('disconnected');
+			connectionStatus = 'disconnected';
 			return;
 		}
 		
@@ -69,7 +93,7 @@ export const webhookStore = {
 			websocket = new WebSocket(wsUrl);
 			
 			websocket.onopen = () => {
-				connectionStatus.set('connected');
+				connectionStatus = 'connected';
 				console.log('WebSocket connected');
 				startPingInterval();
 			};
@@ -85,12 +109,12 @@ export const webhookStore = {
 			
 			websocket.onerror = (error) => {
 				console.error('WebSocket error:', error);
-				connectionStatus.set('disconnected');
+				connectionStatus = 'disconnected';
 			};
 			
 			websocket.onclose = (event) => {
 				console.log('WebSocket closed:', event.code, event.reason);
-				connectionStatus.set('disconnected');
+				connectionStatus = 'disconnected';
 				websocket = null;
 				
 				// Clear ping interval
@@ -106,7 +130,7 @@ export const webhookStore = {
 			};
 		} catch (error) {
 			console.error('Failed to create WebSocket connection:', error);
-			connectionStatus.set('disconnected');
+			connectionStatus = 'disconnected';
 		}
 	},
 
@@ -126,7 +150,7 @@ export const webhookStore = {
 			websocket.close(1000, 'User disconnect');
 			websocket = null;
 		}
-		connectionStatus.set('disconnected');
+		connectionStatus = 'disconnected';
 	},
 
 	// Send message through WebSocket
@@ -140,17 +164,17 @@ export const webhookStore = {
 	loadHistory: async () => {
 		if (!browser) return;
 		
-		isLoading.set(true);
+		isLoading = true;
 		try {
 			const response = await fetch('/api/webhooks');
 			if (response.ok) {
 				const data = await response.json();
-				webhookEvents.set(data.webhooks);
+				webhookEvents = data.webhooks;
 			}
 		} catch (error) {
 			console.error('Failed to load webhook history:', error);
 		} finally {
-			isLoading.set(false);
+			isLoading = false;
 		}
 	},
 
@@ -162,7 +186,7 @@ export const webhookStore = {
 			const response = await fetch('/api/relay/targets');
 			if (response.ok) {
 				const targets = await response.json();
-				relayTargets.set(targets);
+				relayTargets = targets;
 			}
 		} catch (error) {
 			console.error('Failed to load relay targets:', error);
@@ -170,7 +194,7 @@ export const webhookStore = {
 	},
 
 	// Add relay target
-	addTarget: async (target: string, nickname?: string) => {
+	addTargetRemote: async (target: string, nickname?: string) => {
 		if (!browser) return;
 		
 		try {
@@ -182,7 +206,7 @@ export const webhookStore = {
 			
 			if (response.ok) {
 				const newTarget = await response.json();
-				relayTargets.update(targets => [...targets, newTarget]);
+				relayTargets = [...relayTargets, newTarget];
 				return newTarget;
 			} else {
 				const errorData = await response.json();
@@ -195,7 +219,7 @@ export const webhookStore = {
 	},
 
 	// Remove relay target
-	removeTarget: async (targetId: string) => {
+	removeTargetRemote: async (targetId: string) => {
 		if (!browser) return;
 		
 		try {
@@ -206,9 +230,7 @@ export const webhookStore = {
 			});
 			
 			if (response.ok) {
-				relayTargets.update(targets => 
-					targets.filter(target => target.id !== targetId)
-				);
+				relayTargets = relayTargets.filter(target => target.id !== targetId);
 			}
 		} catch (error) {
 			console.error('Failed to remove relay target:', error);
@@ -218,12 +240,22 @@ export const webhookStore = {
 };
 
 /**
- * Handle incoming WebSocket messages
+ * Handle incoming WebSocket messages using Svelte 5 runes
  */
 function handleWebSocketMessage(data: any) {
 	switch (data.type) {
 		case 'webhook':
-			webhookEvents.update(events => [data.data, ...events].slice(0, 100));
+			webhookEvents = [data.data, ...webhookEvents].slice(0, 100);
+			// Optional: Show notification for new webhooks (can be disabled for high volume)
+			if (webhookEvents.length <= 10) {
+				import('$stores/notifications').then(({ notificationStore }) => {
+					notificationStore.info(
+						'New Webhook', 
+						`${data.data.method} ${data.data.path}`,
+						3000
+					);
+				});
+			}
 			break;
 		case 'system':
 			console.log('System message:', data.data.message);

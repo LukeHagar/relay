@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { connectionStatus, webhookStore } from '$lib/stores/webhooks';
+	import { webhookStore } from '$stores/webhooks';
 	import { onMount } from 'svelte';
 
-	let reconnectAttempts = 0;
+	let reconnectAttempts = $state(0);
 	const maxReconnectAttempts = 5;
 
 	onMount(() => {
@@ -17,43 +17,46 @@
 		}
 	}
 
-	$: if ($connectionStatus === 'connected') {
-		reconnectAttempts = 0; // Reset on successful connection
-	}
+	// Svelte 5 effect to reset reconnect attempts on successful connection
+	$effect(() => {
+		if (webhookStore.status === 'connected') {
+			reconnectAttempts = 0;
+		}
+	});
 </script>
 
 <div class="flex items-center space-x-2">
 	<!-- Status Indicator -->
 	<div class="flex items-center">
-		{#if $connectionStatus === 'connected'}
-			<div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-		{:else if $connectionStatus === 'connecting'}
-			<div class="w-3 h-3 bg-yellow-500 rounded-full animate-spin"></div>
+		{#if webhookStore.status === 'connected'}
+			<div class="w-3 h-3 bg-success-500 rounded-full animate-pulse"></div>
+		{:else if webhookStore.status === 'connecting'}
+			<div class="w-3 h-3 bg-warning-500 rounded-full animate-spin"></div>
 		{:else}
-			<div class="w-3 h-3 bg-red-500 rounded-full"></div>
+			<div class="w-3 h-3 bg-danger-500 rounded-full"></div>
 		{/if}
 		<span class="ml-2 text-sm font-medium text-gray-700 capitalize">
-			{$connectionStatus}
+			{webhookStore.status}
 		</span>
 	</div>
 
 	<!-- Reconnect Button (only show when disconnected) -->
-	{#if $connectionStatus === 'disconnected' && reconnectAttempts < maxReconnectAttempts}
+	{#if webhookStore.status === 'disconnected' && reconnectAttempts < maxReconnectAttempts}
 		<button
-			on:click={handleReconnect}
-			class="text-xs text-blue-600 hover:text-blue-500 underline"
+			onclick={handleReconnect}
+			class="text-xs text-primary-600 hover:text-primary-500 underline transition-colors"
 		>
 			Reconnect
 		</button>
 	{/if}
 
 	<!-- WebSocket Info -->
-	{#if $connectionStatus === 'connected'}
-		<span class="text-xs text-gray-500">
+	{#if webhookStore.status === 'connected'}
+		<span class="text-xs text-success-600">
 			WebSocket Active
 		</span>
-	{:else if $connectionStatus === 'disconnected'}
-		<span class="text-xs text-red-500">
+	{:else if webhookStore.status === 'disconnected'}
+		<span class="text-xs text-danger-500">
 			Real-time updates unavailable
 		</span>
 	{/if}

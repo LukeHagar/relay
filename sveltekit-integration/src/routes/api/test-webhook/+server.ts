@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ request, locals }) => {
-	const session = await locals.auth();
+export const POST: RequestHandler = async (event) => {
+	const session = await event.locals.auth();
 	
 	if (!session?.user?.subdomain) {
 		return json({ error: 'Authentication required' }, { status: 401 });
@@ -44,7 +44,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		for (const test of testPayloads) {
 			try {
-				const response = await fetch(`${request.url.origin}/api/webhook/${subdomain}`, {
+				const response = await fetch(`${event.url.origin}/api/webhook/${subdomain}`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': test.contentType,

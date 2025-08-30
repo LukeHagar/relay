@@ -1,15 +1,36 @@
-# Webhook Relay - SvelteKit Integration
+# Webhook Relay - Modern SvelteKit Implementation
 
-A comprehensive SvelteKit implementation of a webhook relay system that receives, monitors, and forwards webhooks in real-time.
+A cutting-edge webhook relay system built with **Svelte 5**, **SvelteKit 2**, and **Tailwind 4** - featuring runes, enhanced reactivity, and modern UI patterns.
 
-## 🚀 Features
+## ✨ Modern Stack Features
 
-- **Real-time Monitoring**: Live webhook events using Server-Sent Events (SSE)
+### 🎯 **Svelte 5 Enhancements**
+- **Runes System**: `$state`, `$derived`, `$effect` for superior reactivity
+- **Enhanced Performance**: Faster updates and better memory management  
+- **Type Safety**: Full TypeScript integration with modern syntax
+- **Snippet System**: Reusable template fragments
+
+### 🚀 **SvelteKit 2 Features**
+- **Enhanced Routing**: Improved file-based routing with better performance
+- **Modern API**: Updated event object patterns and error handling
+- **Better Dev Experience**: Faster HMR and improved debugging
+- **Production Optimizations**: Enhanced build system and deployment
+
+### 🎨 **Tailwind 4 Integration**
+- **Vite Plugin**: Native Tailwind 4 integration via `@tailwindcss/vite`
+- **Enhanced Color System**: Modern color palettes with semantic naming
+- **Improved Animations**: Smooth transitions and micro-interactions
+- **CSS-in-JS Patterns**: Theme function integration
+
+## 🚀 Core Features
+
+- **Real-time Monitoring**: Live webhook events using standard WebSockets
+- **Universal Webhook Support**: JSON, form data, XML, plain text, multipart
 - **Subdomain Routing**: Each user gets a unique subdomain for webhook endpoints
-- **Relay Targets**: Forward webhooks to multiple destinations
-- **Authentication**: GitHub OAuth integration with Auth.js
-- **Event History**: Persistent logging of all webhook events
-- **Modern UI**: Clean, responsive interface built with Tailwind CSS
+- **Relay Targets**: Forward webhooks to multiple destinations with retry logic
+- **Modern Authentication**: GitHub OAuth with Auth.js integration
+- **Advanced UI**: Reactive dashboard with real-time metrics and notifications
+- **Production Ready**: Comprehensive error handling and monitoring
 
 ## 🏗️ Architecture
 

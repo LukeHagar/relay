@@ -1,26 +1,36 @@
 <script lang="ts">
-	import { relayTargets, webhookStore } from '$lib/stores/webhooks';
+	import { webhookStore } from '$stores/webhooks';
+	import { notificationStore } from '$stores/notifications';
 	import { Plus, ExternalLink, Trash2 } from 'lucide-svelte';
 	
-	export let data;
+	interface Props {
+		data: {
+			session?: {
+				user?: any;
+			};
+		};
+	}
 	
-	let showAddForm = false;
-	let newTarget = '';
-	let newNickname = '';
-	let isSubmitting = false;
+	let { data }: Props = $props();
+	
+	let showAddForm = $state(false);
+	let newTarget = $state('');
+	let newNickname = $state('');
+	let isSubmitting = $state(false);
 	
 	async function addTarget() {
 		if (!newTarget.trim()) return;
 		
 		isSubmitting = true;
 		try {
-			await webhookStore.addTarget(newTarget.trim(), newNickname.trim() || undefined);
+			await webhookStore.addTargetRemote(newTarget.trim(), newNickname.trim() || undefined);
 			newTarget = '';
 			newNickname = '';
 			showAddForm = false;
+			notificationStore.success('Target Added', 'Relay target has been successfully configured');
 		} catch (error) {
 			console.error('Failed to add target:', error);
-			alert('Failed to add relay target. Please check the URL and try again.');
+			notificationStore.error('Failed to Add Target', 'Please check the URL and try again');
 		} finally {
 			isSubmitting = false;
 		}
@@ -30,10 +40,11 @@
 		if (!confirm('Are you sure you want to remove this relay target?')) return;
 		
 		try {
-			await webhookStore.removeTarget(targetId);
+			await webhookStore.removeTargetRemote(targetId);
+			notificationStore.success('Target Removed', 'Relay target has been deactivated');
 		} catch (error) {
 			console.error('Failed to remove target:', error);
-			alert('Failed to remove relay target.');
+			notificationStore.error('Failed to Remove Target', 'Please try again');
 		}
 	}
 </script>
@@ -53,8 +64,8 @@
 					</p>
 				</div>
 				<button
-					on:click={() => showAddForm = !showAddForm}
-					class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+					onclick={() => showAddForm = !showAddForm}
+					class="btn-primary inline-flex items-center"
 				>
 					<Plus class="w-4 h-4 mr-2" />
 					Add Target
@@ -69,7 +80,7 @@
 					<h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
 						Add New Relay Target
 					</h3>
-					<form on:submit|preventDefault={addTarget} class="space-y-4">
+					<form onsubmit={(e) => { e.preventDefault(); addTarget(); }} class="space-y-4">
 						<div>
 							<label for="target-url" class="block text-sm font-medium text-gray-700">
 								Target URL
@@ -98,15 +109,15 @@
 						<div class="flex justify-end space-x-3">
 							<button
 								type="button"
-								on:click={() => showAddForm = false}
-								class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+								onclick={() => showAddForm = false}
+								class="btn-secondary"
 							>
 								Cancel
 							</button>
 							<button
 								type="submit"
 								disabled={isSubmitting}
-								class="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+								class="btn-primary disabled:opacity-50"
 							>
 								{isSubmitting ? 'Adding...' : 'Add Target'}
 							</button>
@@ -120,12 +131,12 @@
 		<div class="bg-white shadow rounded-lg">
 			<div class="px-4 py-5 sm:p-6">
 				<h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-					Active Relay Targets ({$relayTargets.length})
+					Active Relay Targets ({webhookStore.targets.length})
 				</h3>
 				
-				{#if $relayTargets.length > 0}
+				{#if webhookStore.targets.length > 0}
 					<div class="space-y-4">
-						{#each $relayTargets as target (target.id)}
+						{#each webhookStore.targets as target (target.id)}
 							<div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
 								<div class="flex-1">
 									<div class="flex items-center space-x-3">
@@ -137,7 +148,7 @@
 												<p class="text-sm font-medium text-gray-900">{target.target}</p>
 											{/if}
 										</div>
-										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
 											Active
 										</span>
 									</div>
@@ -156,8 +167,8 @@
 										<ExternalLink class="w-4 h-4" />
 									</a>
 									<button
-										on:click={() => removeTarget(target.id)}
-										class="text-red-400 hover:text-red-600"
+										onclick={() => removeTarget(target.id)}
+										class="text-danger-400 hover:text-danger-600 transition-colors"
 										title="Remove target"
 									>
 										<Trash2 class="w-4 h-4" />
@@ -178,8 +189,8 @@
 							Add relay targets to forward incoming webhooks to your services.
 						</p>
 						<button
-							on:click={() => showAddForm = true}
-							class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
+							onclick={() => showAddForm = true}
+							class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-primary-600 bg-primary-100 hover:bg-primary-200 transition-colors"
 						>
 							<Plus class="w-4 h-4 mr-2" />
 							Add Your First Target
