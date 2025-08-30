@@ -1,6 +1,6 @@
 # Webhook Relay - SvelteKit Fullstack Application
 
-A complete webhook relay system built entirely with SvelteKit, providing webhook ingestion, relay functionality, and a modern web interface all in one application.
+A complete webhook relay system built entirely with **Svelte 5**, **SvelteKit 3**, and **Tailwind 4**, providing webhook ingestion, relay functionality, and a modern web interface all in one application.
 
 ## Features
 
@@ -31,7 +31,7 @@ A complete webhook relay system built entirely with SvelteKit, providing webhook
 ### Single SvelteKit Application
 - **Webhook Ingestion**: `/webhook/[...path]` - Handles all incoming webhooks
 - **WebSocket Server**: `/api/ws` - Real-time updates for authenticated users
-- **Web Interface**: Modern dashboard and management UI
+- **Web Interface**: Modern dashboard and management UI with Svelte 5 signals
 - **Database**: PostgreSQL with Prisma ORM
 
 ### Key Components
@@ -60,7 +60,7 @@ A complete webhook relay system built entirely with SvelteKit, providing webhook
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+ (for Svelte 5 and SvelteKit 3)
 - PostgreSQL database
 - GitHub OAuth application
 
@@ -170,9 +170,10 @@ sveltekit-app/
 ```
 
 ### Key Technologies
-- **SvelteKit**: Fullstack framework for web interface and API
+- **Svelte 5**: Latest version with signals and runes
+- **SvelteKit 3**: Fullstack framework for web interface and API
+- **Tailwind 4**: Latest version with improved performance
 - **TypeScript**: Type-safe development
-- **Tailwind CSS**: Utility-first styling
 - **Prisma**: Database ORM and migrations
 - **Auth.js**: Authentication and session management
 - **WebSocket**: Real-time communication

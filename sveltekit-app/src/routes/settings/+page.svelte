@@ -3,14 +3,14 @@
 	import { User, Key, Globe, Copy, Check, AlertCircle } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
-	export let data: PageData;
+	let { data } = $props<{ data: PageData }>();
 	
-	let user = data.user;
-	let webhookUrl = '';
-	let copied = false;
-	let showSubdomainForm = false;
-	let newSubdomain = '';
-	let subdomainError = '';
+	let user = $state(data.user);
+	let webhookUrl = $state('');
+	let copied = $state(false);
+	let showSubdomainForm = $state(false);
+	let newSubdomain = $state('');
+	let subdomainError = $state('');
 
 	onMount(() => {
 		if (user?.subdomain) {

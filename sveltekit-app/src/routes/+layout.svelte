@@ -4,8 +4,8 @@
 	import { signIn, signOut } from '$lib/auth';
 	import { Wifi, WifiOff, Settings, Zap, Users, Home } from 'lucide-svelte';
 
-	export let data;
-	$: ({ session } = data);
+	let { data } = $props();
+	let { session } = data;
 </script>
 
 <svelte:head>

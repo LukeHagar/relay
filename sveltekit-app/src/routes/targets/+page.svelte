@@ -3,15 +3,15 @@
 	import { Plus, Trash2, Edit, ExternalLink, ToggleLeft, ToggleRight } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
-	export let data: PageData;
+	let { data } = $props<{ data: PageData }>();
 	
-	let targets = data.targets;
-	let showAddForm = false;
-	let editingTarget: any = null;
-	let formData = {
+	let targets = $state(data.targets);
+	let showAddForm = $state(false);
+	let editingTarget = $state<any>(null);
+	let formData = $state({
 		target: '',
 		nickname: ''
-	};
+	});
 
 	onMount(() => {
 		// Initialize form

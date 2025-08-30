@@ -1,41 +1,46 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { createWebSocketClient, type WebhookEvent } from '$lib/websocket';
+	import { createWebSocketClient, type WebhookEvent } from '$lib/websocket-v5';
 	import { Activity, Zap, Users, Clock, TrendingUp, AlertCircle } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
-	export let data: PageData;
+	let { data } = $props<{ data: PageData }>();
 	
 	let wsClient: ReturnType<typeof createWebSocketClient>;
-	let events: WebhookEvent[] = [];
-	let stats = {
+	let events = $state<WebhookEvent[]>([]);
+	let stats = $state({
 		totalEvents: 0,
 		recentEvents: 0,
 		activeConnections: 0,
 		successRate: 0
-	};
+	});
 	
-	let pathStats = {
+	let pathStats = $state({
 		topPaths: [],
 		methodDistribution: [],
 		recentPaths: []
-	};
+	});
 
 	onMount(() => {
 		if (data.session?.user) {
 			// Connect to SvelteKit WebSocket endpoint
 			wsClient = createWebSocketClient();
 			
-			wsClient.events.subscribe((newEvents) => {
-				events = newEvents;
-				updateStats();
-			});
+					// With Svelte 5 signals, we don't need to subscribe
+		// The events signal will automatically update the UI
 			
 			wsClient.connect();
 		}
 		
 		// Load initial data
 		loadInitialData();
+		
+		// Set up effect to update stats when events change
+		$effect(() => {
+			if (events.length > 0) {
+				updateStats();
+			}
+		});
 		
 		return () => {
 			if (wsClient) {
@@ -173,22 +178,22 @@
 		<div class="card">
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-lg font-medium text-gray-900">Recent Webhook Events</h2>
-				{#if wsClient}
-					<div class="flex items-center space-x-2">
-						<div class="connection-status {$wsClient.state.connected ? 'connected' : $wsClient.state.connecting ? 'connecting' : 'disconnected'}">
-							{#if $wsClient.state.connected}
-								<Activity class="h-3 w-3 mr-1" />
-								Connected
-							{:else if $wsClient.state.connecting}
-								<Clock class="h-3 w-3 mr-1" />
-								Connecting...
-							{:else}
-								<AlertCircle class="h-3 w-3 mr-1" />
-								Disconnected
-							{/if}
-						</div>
-					</div>
-				{/if}
+						{#if wsClient}
+			<div class="flex items-center space-x-2">
+				<div class="connection-status {wsClient.state.connected ? 'connected' : wsClient.state.connecting ? 'connecting' : 'disconnected'}">
+					{#if wsClient.state.connected}
+						<Activity class="h-3 w-3 mr-1" />
+						Connected
+					{:else if wsClient.state.connecting}
+						<Clock class="h-3 w-3 mr-1" />
+						Connecting...
+					{:else}
+						<AlertCircle class="h-3 w-3 mr-1" />
+						Disconnected
+					{/if}
+				</div>
+			</div>
+		{/if}
 			</div>
 
 			{#if events.length === 0}

@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { createWebSocketClient, type WebhookEvent } from '$lib/websocket';
+	import { createWebSocketClient, type WebhookEvent } from '$lib/websocket-v5';
 	import { Search, Filter, ChevronLeft, ChevronRight, Eye, Copy, Download } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
-	export let data: PageData;
+	let { data } = $props<{ data: PageData }>();
 	
 	let wsClient: ReturnType<typeof createWebSocketClient>;
-	let events = data.events;
-	let searchTerm = '';
-	let selectedMethod = 'all';
-	let selectedPath = 'all';
-	let showFilters = false;
-	let currentPage = data.page;
-	let totalPages = data.totalPages;
+	let events = $state(data.events);
+	let searchTerm = $state('');
+	let selectedMethod = $state('all');
+	let selectedPath = $state('all');
+	let showFilters = $state(false);
+	let currentPage = $state(data.page);
+	let totalPages = $state(data.totalPages);
 
 	const methods = ['all', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 	
@@ -24,10 +24,7 @@
 		if (data.session?.user) {
 			wsClient = createWebSocketClient();
 			
-			wsClient.events.subscribe((newEvents) => {
-				// Merge new events with existing ones
-				events = [...newEvents, ...events].slice(0, 100);
-			});
+					// With Svelte 5 signals, events are automatically reactive
 			
 			wsClient.connect();
 		}
@@ -105,17 +102,17 @@
 				<Filter class="h-4 w-4 mr-2" />
 				Filters
 			</button>
-			{#if wsClient}
-				<div class="connection-status {$wsClient.state.connected ? 'connected' : $wsClient.state.connecting ? 'connecting' : 'disconnected'}">
-					{#if $wsClient.state.connected}
-						Live Updates
-					{:else if $wsClient.state.connecting}
-						Connecting...
-					{:else}
-						Disconnected
-					{/if}
-				</div>
-			{/if}
+					{#if wsClient}
+			<div class="connection-status {wsClient.state.connected ? 'connected' : wsClient.state.connecting ? 'connecting' : 'disconnected'}">
+				{#if wsClient.state.connected}
+					Live Updates
+				{:else if wsClient.state.connecting}
+					Connecting...
+				{:else}
+					Disconnected
+				{/if}
+			</div>
+		{/if}
 		</div>
 	</div>
 
