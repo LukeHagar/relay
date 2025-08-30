@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { webhookEvents, isLoading } from '$lib/stores/webhooks';
 	import WebhookEventCard from '$lib/components/WebhookEventCard.svelte';
-	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
+	import WebSocketStatus from '$lib/components/WebSocketStatus.svelte';
 	
 	export let data;
 	
@@ -23,8 +23,7 @@
 					</p>
 				</div>
 				<div class="flex items-center space-x-2">
-					<ConnectionStatus />
-					<span class="text-sm text-gray-500">Live updates</span>
+					<WebSocketStatus />
 				</div>
 			</div>
 		</div>

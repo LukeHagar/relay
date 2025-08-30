@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { webhookEvents, connectionStatus, recentEvents } from '$lib/stores/webhooks';
-	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
+	import WebSocketStatus from '$lib/components/WebSocketStatus.svelte';
 	import WebhookEventCard from '$lib/components/WebhookEventCard.svelte';
 	
 	export let data;
@@ -44,13 +44,7 @@
 				<div class="p-5">
 					<div class="flex items-center">
 						<div class="flex-shrink-0">
-							<ConnectionStatus />
-						</div>
-						<div class="ml-5 w-0 flex-1">
-							<dl>
-								<dt class="text-sm font-medium text-gray-500 truncate">Connection</dt>
-								<dd class="text-lg font-medium text-gray-900 capitalize">{$connectionStatus}</dd>
-							</dl>
+							<WebSocketStatus />
 						</div>
 					</div>
 				</div>
@@ -89,6 +83,47 @@
 				<p class="mt-2 text-sm text-gray-500">
 					Send webhooks to this endpoint. All events will be logged and forwarded to your connected relay targets.
 				</p>
+				<div class="mt-4 flex space-x-3">
+					<button 
+						on:click={async () => {
+							try {
+								const response = await fetch('/api/test-webhook', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' }
+								});
+								const result = await response.json();
+								console.log('Test webhook results:', result);
+								alert(`Test completed! ${result.results?.length || 0} webhook tests run successfully.`);
+							} catch (error) {
+								console.error('Failed to run webhook tests:', error);
+								alert('Test failed. Check console for details.');
+							}
+						}}
+						class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+					>
+						Run Full Test Suite
+					</button>
+					<button 
+						on:click={async () => {
+							try {
+								await fetch(`/api/webhook/${user?.subdomain}`, {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({
+										test: true,
+										message: 'Simple test from dashboard',
+										timestamp: new Date().toISOString()
+									})
+								});
+							} catch (error) {
+								console.error('Failed to send test webhook:', error);
+							}
+						}}
+						class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+					>
+						Send Simple Test
+					</button>
+				</div>
 			</div>
 		</div>
 

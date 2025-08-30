@@ -35,52 +35,105 @@ export const recentEvents = derived(webhookEvents, $events =>
 	$events.slice(0, 10)
 );
 
-// SSE Connection management
-let eventSource: EventSource | null = null;
+// WebSocket Connection management
+let websocket: WebSocket | null = null;
+let reconnectTimeout: number | null = null;
+let pingInterval: number | null = null;
 
 export const webhookStore = {
-	// Initialize SSE connection
-	connect: () => {
+	// Initialize WebSocket connection
+	connect: async () => {
 		if (!browser) return;
 		
 		connectionStatus.set('connecting');
 		
-		eventSource = new EventSource('/api/relay/events');
+		// Create WebSocket connection to separate WebSocket server
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const wsPort = 4001; // WebSocket server port
 		
-		eventSource.onopen = () => {
-			connectionStatus.set('connected');
-		};
-		
-		eventSource.onmessage = (event) => {
-			try {
-				const data = JSON.parse(event.data);
-				
-				if (data.type === 'webhook') {
-					webhookEvents.update(events => [data.data, ...events].slice(0, 100));
-				}
-			} catch (error) {
-				console.error('Failed to parse SSE message:', error);
-			}
-		};
-		
-		eventSource.onerror = () => {
+		// Get session token from cookie for authentication
+		const sessionToken = document.cookie
+			.split('; ')
+			.find(row => row.startsWith('authjs.session-token='))
+			?.split('=')[1];
+
+		if (!sessionToken) {
+			console.error('No session token found');
 			connectionStatus.set('disconnected');
-			// Attempt to reconnect after 3 seconds
-			setTimeout(() => {
-				if (eventSource?.readyState === EventSource.CLOSED) {
-					webhookStore.connect();
+			return;
+		}
+		
+		const wsUrl = `${protocol}//${window.location.hostname}:${wsPort}?token=${sessionToken}`;
+		
+		try {
+			websocket = new WebSocket(wsUrl);
+			
+			websocket.onopen = () => {
+				connectionStatus.set('connected');
+				console.log('WebSocket connected');
+				startPingInterval();
+			};
+			
+			websocket.onmessage = (event) => {
+				try {
+					const data = JSON.parse(event.data);
+					handleWebSocketMessage(data);
+				} catch (error) {
+					console.error('Failed to parse WebSocket message:', error);
 				}
-			}, 3000);
-		};
+			};
+			
+			websocket.onerror = (error) => {
+				console.error('WebSocket error:', error);
+				connectionStatus.set('disconnected');
+			};
+			
+			websocket.onclose = (event) => {
+				console.log('WebSocket closed:', event.code, event.reason);
+				connectionStatus.set('disconnected');
+				websocket = null;
+				
+				// Clear ping interval
+				if (pingInterval) {
+					clearInterval(pingInterval);
+					pingInterval = null;
+				}
+				
+				// Attempt to reconnect if not a normal closure
+				if (event.code !== 1000) {
+					scheduleReconnect();
+				}
+			};
+		} catch (error) {
+			console.error('Failed to create WebSocket connection:', error);
+			connectionStatus.set('disconnected');
+		}
 	},
 
-	// Disconnect SSE
+	// Disconnect WebSocket
 	disconnect: () => {
-		if (eventSource) {
-			eventSource.close();
-			eventSource = null;
+		if (reconnectTimeout) {
+			clearTimeout(reconnectTimeout);
+			reconnectTimeout = null;
+		}
+		
+		if (pingInterval) {
+			clearInterval(pingInterval);
+			pingInterval = null;
+		}
+		
+		if (websocket) {
+			websocket.close(1000, 'User disconnect');
+			websocket = null;
 		}
 		connectionStatus.set('disconnected');
+	},
+
+	// Send message through WebSocket
+	send: (message: any) => {
+		if (websocket && websocket.readyState === WebSocket.OPEN) {
+			websocket.send(JSON.stringify(message));
+		}
 	},
 
 	// Load initial webhook history
@@ -163,3 +216,51 @@ export const webhookStore = {
 		}
 	}
 };
+
+/**
+ * Handle incoming WebSocket messages
+ */
+function handleWebSocketMessage(data: any) {
+	switch (data.type) {
+		case 'webhook':
+			webhookEvents.update(events => [data.data, ...events].slice(0, 100));
+			break;
+		case 'system':
+			console.log('System message:', data.data.message);
+			break;
+		case 'pong':
+			// Connection is alive
+			break;
+		default:
+			console.log('Unknown WebSocket message type:', data.type);
+	}
+}
+
+/**
+ * Start ping interval to keep connection alive
+ */
+function startPingInterval() {
+	if (pingInterval) clearInterval(pingInterval);
+	
+	pingInterval = setInterval(() => {
+		if (websocket && websocket.readyState === WebSocket.OPEN) {
+			webhookStore.send({ type: 'ping', timestamp: Date.now() });
+		} else if (pingInterval) {
+			clearInterval(pingInterval);
+			pingInterval = null;
+		}
+	}, 30000) as any; // Ping every 30 seconds
+}
+
+/**
+ * Schedule reconnection attempt
+ */
+function scheduleReconnect() {
+	if (reconnectTimeout) return;
+	
+	reconnectTimeout = setTimeout(() => {
+		reconnectTimeout = null;
+		console.log('Attempting to reconnect WebSocket...');
+		webhookStore.connect();
+	}, 3000) as any;
+}

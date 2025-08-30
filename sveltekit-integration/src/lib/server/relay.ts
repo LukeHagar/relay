@@ -1,82 +1,16 @@
 import { prisma } from '$db';
 
-// Store for Server-Sent Events connections
-const sseConnections = new Map<string, Set<ReadableStreamDefaultController>>();
-
 export interface WebhookEvent {
 	id: string;
 	type: 'webhook' | 'system';
 	data: any;
 }
 
-/**
- * Add an SSE connection for a user
- */
-export function addSSEConnection(userId: string, controller: ReadableStreamDefaultController) {
-	if (!sseConnections.has(userId)) {
-		sseConnections.set(userId, new Set());
-	}
-	sseConnections.get(userId)!.add(controller);
-	
-	// Send initial connection message
-	sendSSEMessage(controller, {
-		id: crypto.randomUUID(),
-		type: 'system',
-		data: { message: 'Connected to webhook relay', timestamp: new Date().toISOString() }
-	});
-}
-
-/**
- * Remove an SSE connection for a user
- */
-export function removeSSEConnection(userId: string, controller: ReadableStreamDefaultController) {
-	const userConnections = sseConnections.get(userId);
-	if (userConnections) {
-		userConnections.delete(controller);
-		if (userConnections.size === 0) {
-			sseConnections.delete(userId);
-		}
-	}
-}
-
-/**
- * Send message to a specific SSE connection
- */
-function sendSSEMessage(controller: ReadableStreamDefaultController, event: WebhookEvent) {
-	try {
-		const message = `data: ${JSON.stringify(event)}\n\n`;
-		controller.enqueue(new TextEncoder().encode(message));
-	} catch (error) {
-		console.error('Failed to send SSE message:', error);
-	}
-}
-
-/**
- * Broadcast event to all connections for a specific user
- */
-export async function broadcastToUser(userId: string, event: WebhookEvent): Promise<boolean> {
-	const userConnections = sseConnections.get(userId);
-	
-	if (!userConnections || userConnections.size === 0) {
-		return false;
-	}
-
-	let successCount = 0;
-	const totalConnections = userConnections.size;
-
-	userConnections.forEach(controller => {
-		try {
-			sendSSEMessage(controller, event);
-			successCount++;
-		} catch (error) {
-			console.error('Failed to broadcast to connection:', error);
-			// Remove failed connection
-			userConnections.delete(controller);
-		}
-	});
-
-	return successCount > 0;
-}
+// Re-export from websocket server for compatibility
+export { 
+	broadcastToUser,
+	getStats as getConnectionStats
+} from './websocket-server';
 
 /**
  * Get recent webhook events for a user
