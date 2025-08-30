@@ -17,8 +17,8 @@
 
 	onMount(() => {
 		if (data.session?.user) {
-			// Connect to WebSocket for real-time updates
-			wsClient = createWebSocketClient(`ws://localhost:4200/api/relay`);
+			// Connect to SvelteKit WebSocket endpoint
+			wsClient = createWebSocketClient();
 			
 			wsClient.events.subscribe((newEvents) => {
 				events = newEvents;

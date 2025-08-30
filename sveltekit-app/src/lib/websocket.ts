@@ -136,6 +136,9 @@ class WebSocketClient {
 	}
 }
 
-export function createWebSocketClient(url: string) {
-	return new WebSocketClient(url);
+export function createWebSocketClient() {
+	// Use the SvelteKit WebSocket endpoint
+	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+	const host = window.location.host;
+	return new WebSocketClient(`${protocol}//${host}/api/ws`);
 }

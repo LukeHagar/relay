@@ -18,7 +18,7 @@
 
 	onMount(() => {
 		if (data.session?.user) {
-			wsClient = createWebSocketClient(`ws://localhost:4200/api/relay`);
+			wsClient = createWebSocketClient();
 			
 			wsClient.events.subscribe((newEvents) => {
 				// Merge new events with existing ones

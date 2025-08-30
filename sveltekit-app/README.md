@@ -1,18 +1,20 @@
-# Webhook Relay - SvelteKit Integration
+# Webhook Relay - SvelteKit Fullstack Application
 
-A fullstack SvelteKit application that provides a modern web interface for the webhook relay system. This application integrates with the existing Bun-based webhook relay backend to provide real-time webhook management, forwarding, and monitoring.
+A complete webhook relay system built entirely with SvelteKit, providing webhook ingestion, relay functionality, and a modern web interface all in one application.
 
 ## Features
 
-### 🚀 Real-time Webhook Management
-- **Live Dashboard**: Real-time webhook event monitoring with WebSocket connections
+### 🚀 Complete Webhook Management
+- **Webhook Ingestion**: Receive webhooks via subdomain routing
+- **Real-time Dashboard**: Live webhook event monitoring with WebSocket connections
 - **Event History**: Complete webhook event history with search and filtering
-- **Event Details**: View full request bodies, headers, and metadata
+- **Relay System**: Forward webhooks to multiple configured targets
 
 ### 🔄 Webhook Relay System
 - **Multiple Targets**: Configure multiple forwarding destinations
 - **Target Management**: Add, edit, delete, and toggle relay targets
 - **Automatic Forwarding**: Incoming webhooks are automatically forwarded to all active targets
+- **Relay Analytics**: Track success rates and response times
 
 ### 🔐 Authentication & Security
 - **GitHub OAuth**: Secure authentication using GitHub
@@ -26,38 +28,39 @@ A fullstack SvelteKit application that provides a modern web interface for the w
 
 ## Architecture
 
-### Frontend (SvelteKit)
-- **Port**: 3000
-- **Framework**: SvelteKit with TypeScript
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide Svelte
-- **State Management**: Svelte stores for real-time updates
-
-### Backend Integration
-- **Ingest Server**: Receives webhooks via subdomains (port 4000)
-- **Relay Server**: Handles authentication and WebSocket connections (port 4200)
+### Single SvelteKit Application
+- **Webhook Ingestion**: `/webhook/[...path]` - Handles all incoming webhooks
+- **WebSocket Server**: `/api/ws` - Real-time updates for authenticated users
+- **Web Interface**: Modern dashboard and management UI
 - **Database**: PostgreSQL with Prisma ORM
 
 ### Key Components
 
-1. **WebSocket Client** (`src/lib/websocket.ts`)
-   - Manages real-time connections to the relay server
-   - Handles automatic reconnection
-   - Provides reactive stores for webhook events
+1. **Webhook Handler** (`src/routes/webhook/[...path]/+server.ts`)
+   - Receives webhooks via subdomain routing
+   - Stores events in database
+   - Forwards to configured relay targets
+   - Broadcasts real-time updates
 
-2. **Authentication** (`src/lib/auth.ts`)
+2. **WebSocket Handler** (`src/routes/api/ws/+server.ts`)
+   - Manages authenticated WebSocket connections
+   - Provides real-time webhook event updates
+   - Handles connection lifecycle
+
+3. **Relay Service** (`src/lib/relay.ts`)
+   - Forwards webhooks to configured targets
+   - Tracks relay success/failure
+   - Handles timeouts and errors
+
+4. **Authentication** (`src/lib/auth.ts`)
    - GitHub OAuth integration
-   - Session management with Auth.js
+   - Session management
    - User data persistence
-
-3. **Database Layer** (`src/lib/db.ts`)
-   - Prisma client configuration
-   - Connection pooling and optimization
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ or Bun
+- Node.js 18+
 - PostgreSQL database
 - GitHub OAuth application
 
@@ -81,6 +84,7 @@ A fullstack SvelteKit application that provides a modern web interface for the w
    GITHUB_ID="your-github-oauth-app-id"
    GITHUB_SECRET="your-github-oauth-app-secret"
    REDIRECT_URL="http://localhost:3000"
+   WEBHOOK_DOMAIN="yourdomain.com"
    ```
 
 3. **Set up the database**:
@@ -94,15 +98,6 @@ A fullstack SvelteKit application that provides a modern web interface for the w
    npm run dev
    ```
 
-5. **Start the backend servers** (in separate terminals):
-   ```bash
-   # Terminal 1 - Ingest Server
-   bun run server/index.ts
-   
-   # Terminal 2 - Relay Server  
-   bun run server/relay.ts
-   ```
-
 ### Usage
 
 1. **Access the application**: http://localhost:3000
@@ -111,10 +106,36 @@ A fullstack SvelteKit application that provides a modern web interface for the w
 4. **Add relay targets**: Configure where webhooks should be forwarded
 5. **Monitor webhooks**: View real-time webhook events on the dashboard
 
+## Webhook Flow
+
+### 1. Webhook Reception
+```
+External Service → https://{subdomain}.yourdomain.com/webhook → SvelteKit Handler
+```
+
+### 2. Processing Pipeline
+1. **Subdomain Extraction**: Extract user subdomain from hostname
+2. **User Validation**: Verify subdomain belongs to authenticated user
+3. **Event Storage**: Store webhook data in database
+4. **Target Relay**: Forward to all active relay targets
+5. **Real-time Broadcast**: Send updates to connected WebSocket clients
+
+### 3. Real-time Updates
+```
+Webhook Event → Database → WebSocket Broadcast → SvelteKit UI Updates
+```
+
 ## API Endpoints
 
-### Webhook Statistics
+### Webhook Ingestion
+- `ANY /webhook/[...path]` - Receive webhooks (subdomain-based routing)
+
+### WebSocket
+- `GET /api/ws` - WebSocket connection for real-time updates
+
+### Webhook Management
 - `GET /api/webhooks/stats` - Get webhook statistics for dashboard
+- `POST /api/test-webhook` - Create test webhook events
 
 ### Relay Targets
 - `POST /api/targets` - Create a new relay target
@@ -122,13 +143,8 @@ A fullstack SvelteKit application that provides a modern web interface for the w
 - `DELETE /api/targets/[id]` - Delete a relay target
 - `PUT /api/targets/[id]/toggle` - Toggle target active status
 
-## Webhook Flow
-
-1. **Webhook Reception**: Incoming webhooks are received at `{subdomain}.yourdomain.com`
-2. **Event Storage**: Webhook data is stored in the database
-3. **Real-time Updates**: WebSocket clients receive immediate updates
-4. **Target Forwarding**: Webhooks are forwarded to all active relay targets
-5. **UI Updates**: SvelteKit interface updates in real-time
+### User Settings
+- `PUT /api/settings/subdomain` - Update user subdomain
 
 ## Development
 
@@ -136,73 +152,120 @@ A fullstack SvelteKit application that provides a modern web interface for the w
 ```
 sveltekit-app/
 ├── src/
-│   ├── lib/           # Shared utilities and configurations
-│   ├── routes/        # SvelteKit routes and API endpoints
-│   └── app.css        # Global styles
-├── prisma/           # Database schema and migrations
-├── static/           # Static assets
-└── package.json      # Dependencies and scripts
+│   ├── lib/                    # Shared utilities and services
+│   │   ├── auth.ts            # Authentication configuration
+│   │   ├── db.ts              # Database connection
+│   │   ├── relay.ts           # Webhook relay service
+│   │   └── websocket.ts       # WebSocket client utilities
+│   ├── routes/
+│   │   ├── webhook/           # Webhook ingestion endpoints
+│   │   ├── api/               # API endpoints
+│   │   ├── +page.svelte       # Dashboard
+│   │   ├── webhooks/          # Webhook management
+│   │   ├── targets/           # Relay target management
+│   │   └── settings/          # User settings
+│   └── app.css                # Global styles
+├── prisma/                    # Database schema and migrations
+└── package.json               # Dependencies and scripts
 ```
 
 ### Key Technologies
-- **SvelteKit**: Fullstack framework for the web interface
+- **SvelteKit**: Fullstack framework for web interface and API
 - **TypeScript**: Type-safe development
 - **Tailwind CSS**: Utility-first styling
 - **Prisma**: Database ORM and migrations
 - **Auth.js**: Authentication and session management
 - **WebSocket**: Real-time communication
 
-### Customization
+## Production Deployment
 
-#### Adding New Webhook Providers
-1. Extend the webhook event schema in `prisma/schema.prisma`
-2. Add provider-specific parsing in the ingest server
-3. Update the UI components to display new fields
+### 1. Build the Application
+```bash
+npm run build
+```
 
-#### Custom Relay Logic
-1. Modify the relay server to add custom forwarding logic
-2. Add conditional forwarding based on webhook content
-3. Implement retry mechanisms and error handling
-
-#### UI Enhancements
-1. Add new dashboard widgets for specific metrics
-2. Create custom event visualizations
-3. Implement advanced filtering and search
-
-## Deployment
-
-### Production Setup
-1. **Build the application**:
-   ```bash
-   npm run build
-   ```
-
-2. **Set up production environment**:
-   - Configure production database
-   - Set up proper domain and SSL certificates
-   - Configure reverse proxy for subdomain routing
-
-3. **Deploy with adapter**:
-   ```bash
-   npm run preview
-   ```
-
-### Environment Variables for Production
+### 2. Environment Configuration
 ```env
 DATABASE_URL="postgresql://..."
 AUTH_SECRET="production-secret"
 GITHUB_ID="production-github-id"
 GITHUB_SECRET="production-github-secret"
 REDIRECT_URL="https://yourdomain.com"
+WEBHOOK_DOMAIN="yourdomain.com"
 ```
 
-## Contributing
+### 3. Domain Configuration
+- Set up wildcard DNS records (`*.yourdomain.com`)
+- Configure reverse proxy (nginx/traefik) for subdomain routing
+- Set up SSL certificates for secure webhook reception
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+### 4. Start Production Server
+```bash
+npm run preview
+```
+
+## Testing
+
+### Test Webhook Creation
+```bash
+curl -X POST http://localhost:3000/api/test-webhook \
+  -H "Content-Type: application/json" \
+  -d '{"subdomain": "your-subdomain", "method": "POST", "path": "/test", "body": {"test": "data"}}'
+```
+
+### Send Webhook to Your Endpoint
+```bash
+curl -X POST https://your-subdomain.yourdomain.com/webhook/test \
+  -H "Content-Type: application/json" \
+  -d '{"event": "test", "data": "example"}'
+```
+
+## Security Considerations
+
+### 1. Authentication & Authorization
+- GitHub OAuth for user authentication
+- Session-based authentication with secure cookies
+- User data isolation in database queries
+- CSRF protection via SvelteKit
+
+### 2. Data Protection
+- Input validation on all endpoints
+- SQL injection prevention via Prisma ORM
+- XSS protection via SvelteKit's built-in sanitization
+- Secure WebSocket connections
+
+### 3. Rate Limiting
+- Consider implementing rate limiting for webhook endpoints
+- WebSocket connection limits
+- Database query optimization
+
+## Monitoring & Analytics
+
+### 1. Real-time Metrics
+- WebSocket connection status
+- Webhook event counts
+- Relay target success rates
+- User activity tracking
+
+### 2. Error Tracking
+- WebSocket connection failures
+- API endpoint errors
+- Database connection issues
+- Relay target failures
+
+## Future Enhancements
+
+### 1. Advanced Features
+- **Webhook Templates**: Pre-configured webhook formats
+- **Conditional Relay**: Forward based on webhook content
+- **Retry Mechanisms**: Automatic retry for failed relays
+- **Webhook Signatures**: Security verification
+
+### 2. Enterprise Features
+- **Team Management**: Multi-user organizations
+- **API Keys**: Programmatic access
+- **Audit Logs**: Complete activity tracking
+- **Advanced Analytics**: Detailed performance metrics
 
 ## License
 
