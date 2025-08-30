@@ -10,11 +10,15 @@
 	let events = data.events;
 	let searchTerm = '';
 	let selectedMethod = 'all';
+	let selectedPath = 'all';
 	let showFilters = false;
 	let currentPage = data.page;
 	let totalPages = data.totalPages;
 
 	const methods = ['all', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+	
+	// Extract unique paths from events for filtering
+	$: uniquePaths = [...new Set(events.map(e => e.path))].sort();
 
 	onMount(() => {
 		if (data.session?.user) {
@@ -39,7 +43,8 @@
 		const matchesSearch = event.path.toLowerCase().includes(searchTerm.toLowerCase()) ||
 							 event.body.toLowerCase().includes(searchTerm.toLowerCase());
 		const matchesMethod = selectedMethod === 'all' || event.method === selectedMethod;
-		return matchesSearch && matchesMethod;
+		const matchesPath = selectedPath === 'all' || event.path === selectedPath;
+		return matchesSearch && matchesMethod && matchesPath;
 	});
 
 	function formatDate(dateString: string) {
@@ -117,7 +122,7 @@
 	<!-- Filters -->
 	{#if showFilters}
 		<div class="card">
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 				<div>
 					<label for="search" class="block text-sm font-medium text-gray-700 mb-2">
 						Search
@@ -144,6 +149,21 @@
 					>
 						{#each methods as method}
 							<option value={method}>{method}</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label for="path" class="block text-sm font-medium text-gray-700 mb-2">
+						Webhook Path
+					</label>
+					<select
+						id="path"
+						bind:value={selectedPath}
+						class="input-field"
+					>
+						<option value="all">All Paths</option>
+						{#each uniquePaths as path}
+							<option value={path}>{path}</option>
 						{/each}
 					</select>
 				</div>
@@ -177,17 +197,19 @@
 			<div class="space-y-4">
 				{#each filteredEvents as event}
 					<div class="webhook-event">
-						<div class="flex items-start justify-between">
-							<div class="flex-1">
-								<div class="flex items-center space-x-3 mb-2">
-									<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getMethodColor(event.method)}">
-										{event.method}
-									</span>
-									<span class="text-sm font-medium text-gray-900">{event.path}</span>
-									{#if event.query}
-										<span class="text-sm text-gray-500">?{event.query}</span>
-									{/if}
-								</div>
+													<div class="flex items-start justify-between">
+								<div class="flex-1">
+									<div class="flex items-center space-x-3 mb-2">
+										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getMethodColor(event.method)}">
+											{event.method}
+										</span>
+										<div class="flex flex-col">
+											<span class="text-sm font-medium text-gray-900">{event.path}</span>
+											{#if event.query}
+												<span class="text-xs text-gray-500">?{event.query}</span>
+											{/if}
+										</div>
+									</div>
 								
 								<div class="text-xs text-gray-500 mb-2">
 									{formatDate(event.createdAt)}

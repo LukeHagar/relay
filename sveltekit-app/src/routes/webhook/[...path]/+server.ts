@@ -41,6 +41,15 @@ async function handleWebhook(request: Request, params: any, url: URL) {
 			return json({ error: 'Missing Subdomain' }, { status: 400 });
 		}
 
+		// Extract and validate webhook path
+		const webhookPath = params.path || '';
+		const fullPath = url.pathname;
+		
+		// Validate path format (optional: add path restrictions)
+		if (webhookPath.length > 500) {
+			return json({ error: 'Webhook path too long' }, { status: 400 });
+		}
+
 		// Find user by subdomain
 		const user = await prisma.user.findUnique({
 			where: { subdomain },
@@ -72,19 +81,29 @@ async function handleWebhook(request: Request, params: any, url: URL) {
 			}
 		}
 
-		// Get headers (excluding sensitive ones)
+		// Get and process headers (excluding sensitive ones)
 		const headers: Record<string, string> = {};
-		for (const [key, value] of request.headers.entries()) {
-			if (!['authorization', 'cookie', 'x-forwarded-for'].includes(key.toLowerCase())) {
+		const headerEntries = request.headers.entries();
+		
+		for (const [key, value] of headerEntries) {
+			const lowerKey = key.toLowerCase();
+			// Exclude sensitive headers and add webhook-specific headers
+			if (!['authorization', 'cookie', 'x-forwarded-for', 'x-real-ip'].includes(lowerKey)) {
 				headers[key] = value;
 			}
 		}
 
-		// Build webhook event
+		// Add webhook-specific headers for tracking
+		headers['X-Webhook-Relay-Subdomain'] = subdomain;
+		headers['X-Webhook-Relay-Path'] = webhookPath;
+		headers['X-Webhook-Relay-Timestamp'] = new Date().toISOString();
+		headers['X-Webhook-Relay-User-Id'] = user.id;
+
+		// Build webhook event with enhanced path handling
 		const webhookEvent = {
 			userId: user.id,
 			method: request.method,
-			path: url.pathname,
+			path: webhookPath, // Store the actual webhook path, not full URL path
 			query: url.search,
 			body: JSON.stringify(body),
 			headers: JSON.stringify(headers),
@@ -98,9 +117,9 @@ async function handleWebhook(request: Request, params: any, url: URL) {
 
 		// Relay to configured targets (async, don't wait for completion)
 		const relayResults = await relayWebhookToTargets(user.id, {
-			method: webhookData.method,
-			path: webhookData.path,
-			query: webhookData.query,
+			method: request.method,
+			path: webhookPath, // Use the actual webhook path
+			query: url.search,
 			body: body,
 			headers: headers
 		});

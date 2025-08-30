@@ -43,6 +43,9 @@ export async function relayWebhookToTargets(
 						'User-Agent': 'WebhookRelay/1.0',
 						'X-Webhook-Relay-Source': 'webhook-relay',
 						'X-Webhook-Relay-Target': target.nickname || target.id,
+						'X-Webhook-Relay-Original-Path': webhookData.path,
+						'X-Webhook-Relay-Original-Method': webhookData.method,
+						'X-Webhook-Relay-Original-Query': webhookData.query,
 						...webhookData.headers
 					};
 
@@ -50,6 +53,8 @@ export async function relayWebhookToTargets(
 					delete forwardHeaders['host'];
 					delete forwardHeaders['authorization'];
 					delete forwardHeaders['cookie'];
+					delete forwardHeaders['x-webhook-relay-subdomain'];
+					delete forwardHeaders['x-webhook-relay-user-id'];
 
 					// Forward the webhook
 					const response = await fetch(target.target, {

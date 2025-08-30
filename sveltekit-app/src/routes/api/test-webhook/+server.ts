@@ -10,7 +10,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	try {
-		const { subdomain, method = 'POST', path = '/test', body = { test: true } } = await request.json();
+		const { subdomain, method = 'POST', path = '/test', body = { test: true }, headers = {} } = await request.json();
 
 		if (!subdomain) {
 			return json({ error: 'Subdomain is required' }, { status: 400 });
@@ -38,7 +38,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			headers: JSON.stringify({
 				'Content-Type': 'application/json',
 				'User-Agent': 'Test-Webhook/1.0',
-				'X-Test-Webhook': 'true'
+				'X-Test-Webhook': 'true',
+				'X-Webhook-Path': path,
+				...headers
 			}),
 			createdAt: new Date(),
 		};

@@ -14,6 +14,12 @@
 		activeConnections: 0,
 		successRate: 0
 	};
+	
+	let pathStats = {
+		topPaths: [],
+		methodDistribution: [],
+		recentPaths: []
+	};
 
 	onMount(() => {
 		if (data.session?.user) {
@@ -42,9 +48,16 @@
 		if (!data.session?.user) return;
 		
 		try {
-			const response = await fetch('/api/webhooks/stats');
-			if (response.ok) {
-				stats = await response.json();
+			// Load basic stats
+			const statsResponse = await fetch('/api/webhooks/stats');
+			if (statsResponse.ok) {
+				stats = await statsResponse.json();
+			}
+			
+			// Load path statistics
+			const pathResponse = await fetch('/api/webhooks/paths?range=24h');
+			if (pathResponse.ok) {
+				pathStats = await pathResponse.json();
 			}
 		} catch (error) {
 			console.error('Failed to load stats:', error);
@@ -188,12 +201,17 @@
 					{#each events.slice(0, 10) as event}
 						<div class="webhook-event">
 							<div class="flex items-center justify-between">
-								<div class="flex items-center space-x-3">
-									<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getMethodColor(event.method)}">
-										{event.method}
-									</span>
+															<div class="flex items-center space-x-3">
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getMethodColor(event.method)}">
+									{event.method}
+								</span>
+								<div class="flex flex-col">
 									<span class="text-sm font-medium text-gray-900">{event.path}</span>
+									{#if event.query}
+										<span class="text-xs text-gray-500">?{event.query}</span>
+									{/if}
 								</div>
+							</div>
 								<span class="text-xs text-gray-500">{formatDate(event.createdAt)}</span>
 							</div>
 							{#if event.body && event.body !== 'null'}
@@ -208,6 +226,53 @@
 					{/each}
 				</div>
 			{/if}
+		</div>
+
+		<!-- Path Analytics -->
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			<div class="card">
+				<h3 class="text-lg font-medium text-gray-900 mb-4">Top Webhook Paths (24h)</h3>
+				{#if pathStats.topPaths && pathStats.topPaths.length > 0}
+					<div class="space-y-3">
+						{#each pathStats.topPaths.slice(0, 5) as pathStat}
+							<div class="flex items-center justify-between">
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium text-gray-900 truncate">{pathStat.path}</div>
+								</div>
+								<div class="ml-4 flex-shrink-0">
+									<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+										{pathStat.count}
+									</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<p class="text-sm text-gray-500">No webhook paths yet.</p>
+				{/if}
+			</div>
+
+			<div class="card">
+				<h3 class="text-lg font-medium text-gray-900 mb-4">HTTP Method Distribution</h3>
+				{#if pathStats.methodDistribution && pathStats.methodDistribution.length > 0}
+					<div class="space-y-3">
+						{#each pathStats.methodDistribution as methodStat}
+							<div class="flex items-center justify-between">
+								<div class="flex items-center">
+									<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getMethodColor(methodStat.method)}">
+										{methodStat.method}
+									</span>
+								</div>
+								<div class="ml-4">
+									<span class="text-sm font-medium text-gray-900">{methodStat.count}</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<p class="text-sm text-gray-500">No method data yet.</p>
+				{/if}
+			</div>
 		</div>
 
 		<!-- Quick Actions -->
