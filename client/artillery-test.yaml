@@ -1,42 +1,25 @@
+# Load test for the CAPTURE plane (127.0.0.1:8001). Artillery targets one base
+# URL, so channel creation is a pre-step on the control plane (:8000):
+#
+#   curl -X PUT localhost:8000/api/channels/loadtest -d '{"rate_limit":{"burst":5000,"refill_per_s":5000}}'
+#
+# Run:
+#   npx artillery run client/artillery-test.yaml
+
 config:
-  target: "http://localhost:8000" # The HTTP relay server URL
+  target: "http://127.0.0.1:8001"
   phases:
-    - duration: 60 # Test duration: 120 seconds
-      arrivalRate: 200 # 20 new virtual users per second
-      rampTo: 500 # Ramp up to 50 users per second
+    - duration: 30      # 30 seconds
+      arrivalRate: 50   # start at 50 new virtual users per second
+      rampTo: 200       # ramp to 200 new virtual users per second by the end of the phase
+  ensure:
+    - http.response_time.p95: 50   # fail the run if p95 latency rises above 50 ms
+    - http.response_time.p99: 200  # fail the run if p99 latency rises above 200 ms
+
 scenarios:
   - flow:
-      - get:
-          url: "/api/example1" # Sample GET request
-      - think: 0.5 # Wait for 0.5 seconds before sending the next request
       - post:
-          url: "/api/example2" # Sample POST request
+          url: "/c/loadtest/load"
           json:
-            message: "Sample POST event"
-      - think: 0.5
-      - put:
-          url: "/api/example3" # Sample PUT request
-          json:
-            message: "Sample PUT event"
-      - think: 0.5
-      - delete:
-          url: "/api/example4" # Sample DELETE request
-      - think: 0.5
-      - get:
-          url: "/api/example5" # Another GET request
-      - think: 0.5
-      - post:
-          url: "/api/example6" # Another POST request
-          json:
-            message: "Another POST event"
-      - think: 0.5
-      - get:
-          url: "/api/example7" # Another GET request
-      - think: 0.5
-      - put:
-          url: "/api/example8" # Another PUT request
-          json:
-            message: "Another PUT event"
-      - think: 0.5
-      - delete:
-          url: "/api/example9" # Another DELETE request
+            seq: "{{ $randomNumber(1,1000000) }}"
+      - think: 0.1      # 0.1 seconds between requests per virtual user

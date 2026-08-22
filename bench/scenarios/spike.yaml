@@ -1,0 +1,77 @@
+# Spike scenario — capture plane only (channels are PRE-CREATED by the runner).
+#
+#   npx artillery run --output bench/results/spike-raw.json bench/scenarios/spike.yaml
+#
+# Shape: 60s baseline at 100 req/s -> 5s burst at 5000 req/s -> 60s recovery at
+# 100 req/s. Bodies are stripe-invoice-sized (~530 bytes, matching
+# bench/payloads/stripe-invoice.json at 528 B) posted to /c/bench-capture/spike.
+#
+# Rate-limit headroom: the burst injects 25,000 requests in 5s against a token
+# bucket of burst 50,000 / refill 50,000 per s, so no 429s are expected — any
+# 429 here indicates the bucket is misconfigured, not load shedding.
+#
+# Expected RSS behavior (runner samples VmRSS externally):
+#   - baseline (60s @ 100/s, ~530 B bodies): flat, near engine idle RSS.
+#   - burst (5s @ 5000/s): small transient bump (in-flight request buffers +
+#     per-event envelope allocation); with a 50k-token bucket nothing queues,
+#     so the bump should be a few MB at most and proportional to concurrency,
+#     not to total request count.
+#   - recovery (60s @ 100/s): RSS should return to ~baseline within a few
+#     seconds (allocator may retain some freed pages — a small step that then
+#     plateaus is fine). A monotonic climb during recovery is the failure
+#     signal (unbounded buffering / leak).
+
+config:
+  target: "http://127.0.0.1:8001"
+  phases:
+    - name: "baseline"
+      duration: 60
+      arrivalRate: 100
+    - name: "spike"
+      duration: 5
+      arrivalRate: 5000
+    - name: "recovery"
+      duration: 60
+      arrivalRate: 100
+  ensure:
+    - http.response_time.p99: 250   # fail the run if p99 exceeds 250 ms
+    - http.codes.429: 0             # token bucket must absorb the burst cleanly
+    - http.codes.5xx: 0
+
+scenarios:
+  - name: "stripe-invoice-sized capture"
+    flow:
+      - post:
+          url: "/c/bench-capture/spike"
+          headers:
+            content-type: "application/json"
+          json:
+            id: "evt_{{ $randomNumber(1, 999999999) }}"
+            object: "event"
+            api_version: "2024-06-20"
+            created: 1755700000
+            data:
+              object:
+                id: "in_{{ $randomNumber(100000, 999999) }}"
+                object: "invoice"
+                amount_due: "{{ $randomNumber(1000, 990000) }}"
+                amount_paid: 0
+                currency: "usd"
+                customer: "cus_{{ $randomNumber(100000, 999999) }}"
+                status: "open"
+                number: "INV-{{ $randomNumber(1, 99999) }}"
+                lines:
+                  - id: "il_{{ $randomNumber(1, 999999) }}"
+                    description: "Subscription creation for monthly plan tier"
+                    amount: "{{ $randomNumber(1000, 50000) }}"
+                    quantity: 1
+                    type: "subscription"
+                metadata:
+                  order_ref: "ord_{{ $randomNumber(1, 999999) }}"
+                  source: "artillery-spike"
+            livemode: false
+            pending_webhooks: 1
+            request:
+              id: "req_{{ $randomNumber(1, 999999999) }}"
+              idempotency_key: "idem_{{ $randomNumber(1, 999999999) }}"
+            type: "invoice.created"

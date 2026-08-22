@@ -1,0 +1,22 @@
+[package]
+name = "relay-desktop"
+description = "Relay desktop shell (Tauri) — thin webview host for the inbox UI"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+# Intentionally outside the engine workspace: the shell has its own dependency
+# graph (Tauri/wry/WebKit) and release profile.
+[workspace]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+lto = "thin"
+strip = true

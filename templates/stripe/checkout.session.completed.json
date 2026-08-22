@@ -1,0 +1,45 @@
+{
+  "v": 1,
+  "provider": "stripe",
+  "name": "checkout.session.completed",
+  "description": "Hosted checkout session completed successfully",
+  "signing_hint": "stripe",
+  "request": {
+    "method": "POST",
+    "path": "/checkout.session.completed",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "id": "evt_{{uuid}}",
+      "object": "event",
+      "api_version": "2024-06-20",
+      "created": "{{now_unix}}",
+      "livemode": false,
+      "type": "checkout.session.completed",
+      "data": {
+        "object": {
+          "id": "cs_test_{{uuid}}",
+          "object": "checkout.session",
+          "mode": "payment",
+          "payment_status": "paid",
+          "status": "complete",
+          "customer": "{{customer}}",
+          "amount_total": "{{amount_total}}",
+          "currency": "{{currency}}",
+          "success_url": "{{success_url}}",
+          "metadata": { "order_id": "{{order_id}}" }
+        }
+      },
+      "pending_webhooks": 1,
+      "request": { "id": "req_{{uuid}}", "idempotency_key": null }
+    }
+  },
+  "defaults": {
+    "vars": {
+      "customer": "cus_QY0Example123",
+      "amount_total": 5000,
+      "currency": "usd",
+      "success_url": "https://example.com/success",
+      "order_id": "ord_1001"
+    }
+  }
+}

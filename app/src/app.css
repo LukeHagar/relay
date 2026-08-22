@@ -1,0 +1,122 @@
+/* Relay UI — theme derived from parke.dev
+   Inter (body) · Space Grotesk (headings) · JetBrains Mono (terminal/data)
+   Deep navy surfaces (#060A13 base), blue primary, gold secondary, glow accents. */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+:root {
+  /* parke.dev palette */
+  --bg: #060a13;
+  --surface-950: #090f1b;
+  --surface-900: #0c1322;
+  --surface-800: #111b30;
+  --surface-700: #1a2743;
+  --surface-600: #24345a;
+  --border: var(--surface-700);
+  --primary-200: #accbff;
+  --primary-300: #8fbcff;
+  --primary-400: #6da8ff;
+  --primary-700: #1d51ac;
+  --primary-800: #163d82;
+  --gold-300: #ffd97a;
+  --gold-500: #e6a817;
+  --gold-glow: 0 0 18px rgba(255, 217, 122, 0.28);
+  --blue-glow: 0 0 18px rgba(111, 168, 255, 0.25);
+  --text: #e8eef9;
+  --dim: #93a1c2;
+  --green: #4ade80;
+  --red: #f87171;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Space Grotesk", var(--font-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(22, 61, 130, 0.35), transparent 60%),
+    radial-gradient(900px 420px at -10% 110%, rgba(230, 168, 23, 0.08), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: 0.01em; }
+code, pre, .mono { font-family: var(--font-mono); }
+a { color: var(--primary-300); text-decoration: none; }
+
+::selection { background: rgba(141, 188, 255, 0.35); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--surface-700); border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+input, select, textarea, button {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+}
+input, select, textarea {
+  background: var(--surface-900);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary-400);
+  box-shadow: var(--blue-glow);
+}
+:focus-visible {
+  outline: 2px solid var(--primary-400);
+  outline-offset: 2px;
+}
+button, [role="tab"], a, li[role="option"], li[aria-selected] { transition: background 140ms ease, border-color 140ms ease, color 140ms ease; }
+li[aria-selected="true"] {
+  background: linear-gradient(90deg, rgba(111, 168, 255, 0.16), transparent 70%);
+  box-shadow: inset 2px 0 0 var(--primary-400);
+}
+button {
+  background: var(--surface-800);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+button:hover { border-color: var(--primary-400); }
+button.primary {
+  background: linear-gradient(180deg, var(--primary-800), var(--primary-700));
+  border-color: var(--primary-400);
+  color: #eaf3ff;
+}
+button.gold { border-color: var(--gold-500); color: var(--gold-300); }
+button.danger:hover { border-color: var(--red); color: var(--red); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+.badge.online .dot { background: var(--green); box-shadow: 0 0 8px rgba(74, 222, 128, 0.7); }
+.badge.offline .dot { background: var(--red); }
+.badge.gold { color: var(--gold-300); }
+.badge.gold .dot { background: var(--gold-300); box-shadow: var(--gold-glow); }
+
+.card {
+  background: var(--surface-900);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.muted { color: var(--dim); }
+[hidden] { display: none !important; }

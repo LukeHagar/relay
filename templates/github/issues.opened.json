@@ -1,0 +1,37 @@
+{
+  "v": 1,
+  "provider": "github",
+  "name": "issues.opened",
+  "description": "An issue was opened",
+  "signing_hint": "github",
+  "request": {
+    "method": "POST",
+    "path": "/issues",
+    "headers": { "Content-Type": "application/json", "X-GitHub-Event": "issues", "X-GitHub-Delivery": "{{uuid}}" },
+    "body": {
+      "action": "opened",
+      "issue": {
+        "id": 2345678901,
+        "number": "{{issue_number}}",
+        "title": "{{title}}",
+        "body": "{{body}}",
+        "state": "open",
+        "user": { "login": "{{author}}" },
+        "labels": [{ "name": "bug", "color": "d73a4a" }],
+        "html_url": "https://github.com/{{owner}}/{{repo}}/issues/{{issue_number}}"
+      },
+      "repository": { "full_name": "{{owner}}/{{repo}}" },
+      "sender": { "login": "{{author}}" }
+    }
+  },
+  "defaults": {
+    "vars": {
+      "issue_number": 17,
+      "title": "Signature validation fails on replay",
+      "body": "Replayed deliveries are rejected because the timestamp is stale.",
+      "author": "octocat",
+      "owner": "octocat",
+      "repo": "hello-world"
+    }
+  }
+}

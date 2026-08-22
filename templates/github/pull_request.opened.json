@@ -1,0 +1,46 @@
+{
+  "v": 1,
+  "provider": "github",
+  "name": "pull_request.opened",
+  "description": "A pull request was opened",
+  "signing_hint": "github",
+  "request": {
+    "method": "POST",
+    "path": "/pull_request",
+    "headers": { "Content-Type": "application/json", "X-GitHub-Event": "pull_request", "X-GitHub-Delivery": "{{uuid}}" },
+    "body": {
+      "action": "opened",
+      "number": "{{pr_number}}",
+      "pull_request": {
+        "id": 1933633305,
+        "number": "{{pr_number}}",
+        "title": "{{title}}",
+        "body": "{{body}}",
+        "state": "open",
+        "draft": false,
+        "user": { "login": "{{author}}" },
+        "base": { "ref": "main", "sha": "{{base_sha}}" },
+        "head": { "ref": "{{feature_branch}}", "sha": "{{head_sha}}" },
+        "html_url": "https://github.com/{{owner}}/{{repo}}/pull/{{pr_number}}"
+      },
+      "repository": {
+        "full_name": "{{owner}}/{{repo}}",
+        "default_branch": "main"
+      },
+      "sender": { "login": "{{author}}" }
+    }
+  },
+  "defaults": {
+    "vars": {
+      "pr_number": 42,
+      "title": "Add webhook replay support",
+      "body": "Closes #7",
+      "author": "octocat",
+      "owner": "octocat",
+      "repo": "hello-world",
+      "feature_branch": "feature/replay",
+      "base_sha": "7fd1a60b01f91b314f59955a4e4d4e80d8edf11d",
+      "head_sha": "b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c4"
+    }
+  }
+}

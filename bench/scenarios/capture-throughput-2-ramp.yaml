@@ -1,0 +1,61 @@
+# Capture throughput profile 2/3: RAMP.
+# 30 s ramping 500 -> 2000 req/s posting stripe-invoice-sized bodies
+# (~550 B inline, matching bench/payloads/stripe-invoice.json at 528 B) to
+# /c/bench-capture/invoice. Ids are randomized with $randomNumber so every
+# body is unique (no server-side dedupe/cache artifacts).
+#
+# This is a separate file because Artillery cannot bind flows to individual
+# phases in one YAML (see capture-throughput-1-warmup.yaml header).
+#
+# Channel bench-capture is PRE-CREATED by the runner with
+# rate_limit {burst: 50000, refill_per_s: 50000}; no control-plane calls here.
+#
+# Run: npx artillery run --output bench/results/capture-ramp.raw.json bench/scenarios/capture-throughput-2-ramp.yaml
+
+config:
+  target: "http://127.0.0.1:8001"
+  phases:
+    - duration: 30
+      arrivalRate: 500
+      rampTo: 2000
+      name: "ramp: 500->2000/s invoice bodies -> /c/bench-capture/invoice"
+  # p95 < 25 ms and p99 < 100 ms must hold across the whole ramp. Any 429s in
+  # the raw output mean the channel's token-bucket limit was not actually
+  # raised (peak offered load 2000/s is far below burst=50000 /
+  # refill=50000/s) -- do not read 429s as "server at capacity".
+  ensure:
+    - http.response_time.p95: 25   # ms; fail above
+    - http.response_time.p99: 100  # ms; fail above
+
+scenarios:
+  - name: "ramp-invoice"
+    flow:
+      - post:
+          url: "/c/bench-capture/invoice"
+          json:
+            id: "evt_{{ $randomNumber(100000, 999999) }}JAVBXQ7G5W3T8R9SK2M4N6P8"
+            object: "event"
+            api_version: "2024-06-20"
+            created: 1787350000
+            livemode: false
+            type: "invoice.paid"
+            data:
+              object:
+                id: "in_{{ $randomNumber(1000, 9999) }}"
+                object: "invoice"
+                amount_paid: 4200
+                amount_due: 4200
+                currency: "usd"
+                customer: "cus_QY0Example123"
+                status: "paid"
+                lines:
+                  - id: "il_{{ $randomNumber(1000, 9999) }}"
+                    amount: 4200
+                    description: "Pro plan (Aug)"
+                    price:
+                      id: "price_001"
+                      unit_amount: 4200
+                      currency: "usd"
+            pending_webhooks: 1
+            request:
+              id: "req_{{ $randomNumber(1000, 9999) }}"

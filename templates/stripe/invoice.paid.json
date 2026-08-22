@@ -1,0 +1,44 @@
+{
+  "v": 1,
+  "provider": "stripe",
+  "name": "invoice.paid",
+  "description": "Checkout-completed invoice payment (snapshot event shape)",
+  "signing_hint": "stripe",
+  "request": {
+    "method": "POST",
+    "path": "/invoice.paid",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "id": "evt_{{uuid}}",
+      "object": "event",
+      "api_version": "2024-06-20",
+      "created": "{{now_unix}}",
+      "livemode": false,
+      "type": "invoice.paid",
+      "data": {
+        "object": {
+          "id": "in_{{customer}}",
+          "object": "invoice",
+          "amount_paid": "{{amount_paid}}",
+          "amount_due": "{{amount_paid}}",
+          "currency": "{{currency}}",
+          "customer": "{{customer}}",
+          "status": "paid",
+          "paid": true,
+          "subscription": null,
+          "number": "INV-{{uuid}}",
+          "hosted_invoice_url": "https://invoice.stripe.com/i/acct_test_{{uuid}}"
+        }
+      },
+      "pending_webhooks": 1,
+      "request": { "id": "req_{{uuid}}", "idempotency_key": null }
+    }
+  },
+  "defaults": {
+    "vars": {
+      "customer": "cus_QY0Example123",
+      "amount_paid": 4200,
+      "currency": "usd"
+    }
+  }
+}

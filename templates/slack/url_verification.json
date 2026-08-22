@@ -1,0 +1,22 @@
+{
+  "v": 1,
+  "provider": "slack",
+  "name": "url_verification",
+  "description": "Slack Events API handshake — your endpoint must echo the challenge (use response_mode: echo)",
+  "request": {
+    "method": "POST",
+    "path": "/slack/events",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "token": "{{verification_token}}",
+      "challenge": "{{challenge}}",
+      "type": "url_verification"
+    }
+  },
+  "defaults": {
+    "vars": {
+      "verification_token": "xyzz0WbapA4vBCDEFasx0q6G",
+      "challenge": "3eZbrw1aBm2rZgRNFdxV2598EHpCpB7HsH6ez0Hhd7CFXAjdAlBlpjwvzuXxJcLQ"
+    }
+  }
+}

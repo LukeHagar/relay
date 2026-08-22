@@ -1,0 +1,41 @@
+{
+  "v": 1,
+  "provider": "stripe",
+  "name": "customer.subscription.deleted",
+  "description": "A customer subscription was cancelled",
+  "signing_hint": "stripe",
+  "request": {
+    "method": "POST",
+    "path": "/customer.subscription.deleted",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "id": "evt_{{uuid}}",
+      "object": "event",
+      "api_version": "2024-06-20",
+      "created": "{{now_unix}}",
+      "livemode": false,
+      "type": "customer.subscription.deleted",
+      "data": {
+        "object": {
+          "id": "sub_{{subscription}}",
+          "object": "subscription",
+          "status": "canceled",
+          "cancel_at_period_end": false,
+          "canceled_at": "{{now_unix}}",
+          "ended_at": "{{now_unix}}",
+          "customer": "{{customer}}",
+          "current_period_end": "{{period_end}}"
+        }
+      },
+      "pending_webhooks": 1,
+      "request": { "id": "req_{{uuid}}", "idempotency_key": null }
+    }
+  },
+  "defaults": {
+    "vars": {
+      "customer": "cus_QY0Example123",
+      "subscription": "SubExample456",
+      "period_end": 1799999999
+    }
+  }
+}

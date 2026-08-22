@@ -1,0 +1,51 @@
+{
+  "v": 1,
+  "provider": "github",
+  "name": "push",
+  "description": "One or more commits pushed to a branch",
+  "signing_hint": "github",
+  "request": {
+    "method": "POST",
+    "path": "/push",
+    "headers": { "Content-Type": "application/json", "X-GitHub-Event": "push", "X-GitHub-Delivery": "{{uuid}}" },
+    "body": {
+      "ref": "refs/heads/{{branch}}",
+      "before": "{{before_sha}}",
+      "after": "{{after_sha}}",
+      "repository": {
+        "full_name": "{{owner}}/{{repo}}",
+        "default_branch": "main",
+        "html_url": "https://github.com/{{owner}}/{{repo}}"
+      },
+      "pusher": { "name": "{{author}}" },
+      "sender": { "login": "{{author}}" },
+      "commits": [
+        {
+          "id": "{{after_sha}}",
+          "message": "{{commit_message}}",
+          "timestamp": "{{now_iso}}",
+          "author": { "name": "{{author}}", "email": "{{author_email}}" },
+          "modified": ["src/main.rs"],
+          "added": [],
+          "removed": []
+        }
+      ],
+      "head_commit": {
+        "id": "{{after_sha}}",
+        "message": "{{commit_message}}"
+      }
+    }
+  },
+  "defaults": {
+    "vars": {
+      "branch": "main",
+      "before_sha": "7fd1a60b01f91b314f59955a4e4d4e80d8edf11d",
+      "after_sha": "b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c4",
+      "author": "octocat",
+      "author_email": "octocat@github.com",
+      "owner": "octocat",
+      "repo": "hello-world",
+      "commit_message": "Fix signature validation on stale timestamps"
+    }
+  }
+}

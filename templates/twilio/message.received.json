@@ -1,0 +1,20 @@
+{
+  "v": 1,
+  "provider": "twilio",
+  "name": "message.received",
+  "description": "Inbound SMS received (form-encoded body, Twilio-signed over URL + params)",
+  "signing_hint": "twilio",
+  "request": {
+    "method": "POST",
+    "path": "/twilio/sms",
+    "headers": { "Content-Type": "application/x-www-form-urlencoded" },
+    "body": "MessageSid=SM{{sid}}&SmsSid=SM{{sid}}&AccountSid=AC{{account}}&From=%2B15551234567&To=%2B15557654321&Body={{message}}"
+  },
+  "defaults": {
+    "vars": {
+      "sid": "0123456789abcdef0123456789abcdef",
+      "account": "a2f1c34b",
+      "message": "Hello from Relay"
+    }
+  }
+}

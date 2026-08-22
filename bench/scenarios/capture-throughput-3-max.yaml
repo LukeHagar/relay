@@ -1,0 +1,37 @@
+# Capture throughput profile 3/3: MAX (the ceiling probe).
+# 20 s at a steady 3000 req/s posting minimal bodies (~15 B inline, matching
+# bench/payloads/minimal.json at 11 B) to /c/bench-capture/max. Small bodies
+# isolate the capture path itself from payload serialization cost: if this
+# phase holds p95 < 25 ms with zero 429s, the capture plane sustains >= 3000
+# events/s; if latencies blow past the ensure thresholds, ~3000/s is the
+# observed ceiling under this build/host.
+#
+# Separate file because Artillery cannot bind flows to individual phases in
+# one YAML (see capture-throughput-1-warmup.yaml header).
+#
+# Channel bench-capture is PRE-CREATED by the runner with
+# rate_limit {burst: 50000, refill_per_s: 50000}; no control-plane calls here.
+#
+# Run: npx artillery run --output bench/results/capture-max.raw.json bench/scenarios/capture-throughput-3-max.yaml
+
+config:
+  target: "http://127.0.0.1:8001"
+  phases:
+    - duration: 20
+      arrivalRate: 3000
+      name: "max: 3000/s minimal bodies -> /c/bench-capture/max"
+  # Ceiling probe: failing ensure = we found the ceiling below 3000/s.
+  # Any http.codes.429 in the raw output means the token bucket was not
+  # raised (3000/s offered vs burst=50000 / refill=50000/s should never
+  # throttle) -- treat 429s as a configuration signal, not headroom.
+  ensure:
+    - http.response_time.p95: 25   # ms; fail above
+    - http.response_time.p99: 100  # ms; fail above
+
+scenarios:
+  - name: "max-minimal"
+    flow:
+      - post:
+          url: "/c/bench-capture/max"
+          json:
+            ping: "{{ $randomNumber(1, 100000000) }}"

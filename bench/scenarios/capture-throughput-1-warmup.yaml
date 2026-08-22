@@ -1,0 +1,37 @@
+# Capture throughput profile 1/3: WARMUP.
+# 15 s at a steady 200 req/s posting minimal-sized bodies (~15 B inline,
+# matching bench/payloads/minimal.json at 11 B) to /c/bench-capture/warm.
+#
+# Why this is its own file: Artillery phases are global -- scenario selection
+# is a weighted pick per spawned virtual user (artillery 2.0.34
+# lib/core/runner.ts), so distinct flows cannot be bound to distinct phases
+# inside one YAML. Splitting the three profiles into serially-run files keeps
+# each phase's endpoint + body size exact and gives one raw.json per phase.
+#
+# Channel bench-capture is PRE-CREATED by the runner with
+# rate_limit {burst: 50000, refill_per_s: 50000}; this file never touches the
+# control plane.
+#
+# Run: npx artillery run --output bench/results/capture-warmup.raw.json bench/scenarios/capture-throughput-1-warmup.yaml
+
+config:
+  target: "http://127.0.0.1:8001"
+  phases:
+    - duration: 15
+      arrivalRate: 200
+      name: "warmup: 200/s minimal bodies -> /c/bench-capture/warm"
+  # Fail the run if capture-plane latency degrades beyond these bounds.
+  # A non-zero http.codes.429 count means the channel's token bucket was NOT
+  # raised high enough (at 200/s against burst=50000 / refill=50000 there
+  # should never be a 429); interpret any 429s in the raw output accordingly.
+  ensure:
+    - http.response_time.p95: 25   # ms; fail above
+    - http.response_time.p99: 100  # ms; fail above
+
+scenarios:
+  - name: "warmup-minimal"
+    flow:
+      - post:
+          url: "/c/bench-capture/warm"
+          json:
+            ping: "{{ $randomNumber(1, 100000000) }}"

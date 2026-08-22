@@ -1,0 +1,332 @@
+# Mixed developer-session workload against BOTH planes of the relay.
+#
+#   flow A (weight 6 -> ~60%): capture plane POST, github-push.json-sized inline
+#       body (~11.3 KB) with two $randomNumber fields for uniqueness.
+#   flow B (weight 2 -> ~20%): control plane GET channel events (limit=50).
+#   flow C (weight 1 -> ~10%): control plane POST /api/replay with a random
+#       event_id and a valid target_url -- almost always 404 no_such_event on
+#       purpose. This measures replay API overhead INCLUDING the error path,
+#       not successful replays; latency numbers for this flow are error-path
+#       latencies by design.
+#   flow D (weight 1 -> ~10%): control plane GET /api/billing/plans.
+#
+# Artillery's phase arrivalRate is test-wide: arrivals are distributed across
+# scenarios proportionally to `weight`, so arrivalRate 300/s here means a true
+# 300/s total arrival rate split 60/20/10/10 across flows A-D. Channels are
+# pre-created by the runner script; nothing is created inside this scenario.
+
+config:
+  target: "http://127.0.0.1:8001"
+  phases:
+    - name: mixed-load
+      duration: 60
+      arrivalRate: 300
+  ensure:
+    - http.response_time.p95: 40
+
+scenarios:
+- name: flowA-capture-github-push
+  weight: 6
+  flow:
+  - post:
+      url: /c/bench-mixed/github
+      json:
+        ref: refs/heads/main
+        before: 7fd1a60b01f91b314f59955a4e4d{{$randomNumber(10000,99999)}}
+        after: b7a1c2ea2b0fc0d9224c8f5152b8dd{{$randomNumber(10000,99999)}}
+        repository:
+          id: 186853002
+          full_name: octocat/hello-world
+          default_branch: main
+          html_url: https://github.com/octocat/hello-world
+          owner:
+            login: octocat
+        pusher:
+          name: octocat
+        sender:
+          login: octocat
+          type: User
+        commits:
+        - id: '{{ $randomNumber(1000000000000000000, 9999999999999999999) }}'
+          message: 'fix(module-0): handle edge case in signature validation path #0
+
+
+            Longer body explaining the rationale for change 0, referencing the issue and describing the regression test added.
+            fix(module-0): handle edge case in signature validation path #0
+
+
+            Longer body explaining the rationale for change 0, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-0/handler.rs
+          - src/module-0/tests.rs
+          removed: []
+          modified:
+          - src/module-0/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c01
+          message: 'fix(module-1): handle edge case in signature validation path #1
+
+
+            Longer body explaining the rationale for change 1, referencing the issue and describing the regression test added.
+            fix(module-1): handle edge case in signature validation path #1
+
+
+            Longer body explaining the rationale for change 1, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-1/handler.rs
+          - src/module-1/tests.rs
+          removed: []
+          modified:
+          - src/module-1/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c02
+          message: 'fix(module-2): handle edge case in signature validation path #2
+
+
+            Longer body explaining the rationale for change 2, referencing the issue and describing the regression test added.
+            fix(module-2): handle edge case in signature validation path #2
+
+
+            Longer body explaining the rationale for change 2, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-2/handler.rs
+          - src/module-2/tests.rs
+          removed: []
+          modified:
+          - src/module-2/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c03
+          message: 'fix(module-3): handle edge case in signature validation path #3
+
+
+            Longer body explaining the rationale for change 3, referencing the issue and describing the regression test added.
+            fix(module-3): handle edge case in signature validation path #3
+
+
+            Longer body explaining the rationale for change 3, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-3/handler.rs
+          - src/module-3/tests.rs
+          removed: []
+          modified:
+          - src/module-3/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c04
+          message: 'fix(module-4): handle edge case in signature validation path #4
+
+
+            Longer body explaining the rationale for change 4, referencing the issue and describing the regression test added.
+            fix(module-4): handle edge case in signature validation path #4
+
+
+            Longer body explaining the rationale for change 4, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-4/handler.rs
+          - src/module-4/tests.rs
+          removed: []
+          modified:
+          - src/module-4/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c05
+          message: 'fix(module-5): handle edge case in signature validation path #5
+
+
+            Longer body explaining the rationale for change 5, referencing the issue and describing the regression test added.
+            fix(module-5): handle edge case in signature validation path #5
+
+
+            Longer body explaining the rationale for change 5, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-5/handler.rs
+          - src/module-5/tests.rs
+          removed: []
+          modified:
+          - src/module-5/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c06
+          message: 'fix(module-6): handle edge case in signature validation path #6
+
+
+            Longer body explaining the rationale for change 6, referencing the issue and describing the regression test added.
+            fix(module-6): handle edge case in signature validation path #6
+
+
+            Longer body explaining the rationale for change 6, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-6/handler.rs
+          - src/module-6/tests.rs
+          removed: []
+          modified:
+          - src/module-6/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c07
+          message: 'fix(module-7): handle edge case in signature validation path #7
+
+
+            Longer body explaining the rationale for change 7, referencing the issue and describing the regression test added.
+            fix(module-7): handle edge case in signature validation path #7
+
+
+            Longer body explaining the rationale for change 7, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-7/handler.rs
+          - src/module-7/tests.rs
+          removed: []
+          modified:
+          - src/module-7/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c08
+          message: 'fix(module-8): handle edge case in signature validation path #8
+
+
+            Longer body explaining the rationale for change 8, referencing the issue and describing the regression test added.
+            fix(module-8): handle edge case in signature validation path #8
+
+
+            Longer body explaining the rationale for change 8, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-8/handler.rs
+          - src/module-8/tests.rs
+          removed: []
+          modified:
+          - src/module-8/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c09
+          message: 'fix(module-9): handle edge case in signature validation path #9
+
+
+            Longer body explaining the rationale for change 9, referencing the issue and describing the regression test added.
+            fix(module-9): handle edge case in signature validation path #9
+
+
+            Longer body explaining the rationale for change 9, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-9/handler.rs
+          - src/module-9/tests.rs
+          removed: []
+          modified:
+          - src/module-9/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c10
+          message: 'fix(module-10): handle edge case in signature validation path #10
+
+
+            Longer body explaining the rationale for change 10, referencing the issue and describing the regression test added.
+            fix(module-10): handle edge case in signature validation path #10
+
+
+            Longer body explaining the rationale for change 10, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-10/handler.rs
+          - src/module-10/tests.rs
+          removed: []
+          modified:
+          - src/module-10/mod.rs
+        - id: b7a1c2ea2b0fc0d9224c8f5152b8dd70f1a2b3c11
+          message: 'fix(module-11): handle edge case in signature validation path #11
+
+
+            Longer body explaining the rationale for change 11, referencing the issue and describing the regression test added.
+            fix(module-11): handle edge case in signature validation path #11
+
+
+            Longer body explaining the rationale for change 11, referencing the issue and describing the regression test added.
+            The change touches the webhook signature verification helper and the retry backoff table used when a delivery
+            is rejected upstream; it also updates the fixture corpus so replay tests exercise both the legacy and canonical
+            header layouts end to end.'
+          timestamp: '2026-08-21T12:00:00Z'
+          author:
+            name: octocat
+            email: octocat@example.com
+          added:
+          - src/module-11/handler.rs
+          - src/module-11/tests.rs
+          removed: []
+          modified:
+          - src/module-11/mod.rs
+- name: flowB-control-list-events
+  weight: 2
+  flow:
+  - get:
+      url: http://127.0.0.1:8000/api/channels/bench-mixed/events?limit=50
+- name: flowC-replay-miss
+  weight: 1
+  flow:
+  - post:
+      url: http://127.0.0.1:8000/api/replay
+      json:
+        target_url: http://127.0.0.1:8001/c/bench-mixed/github
+        source:
+          event_id: '{{ $randomString }}'
+- name: flowD-billing-plans
+  weight: 1
+  flow:
+  - get:
+      url: http://127.0.0.1:8000/api/billing/plans

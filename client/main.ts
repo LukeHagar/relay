@@ -1,88 +1,90 @@
-const relayUrl = "http://localhost:8000"; // Go relay server URL (HTTP server)
-const socketUrl = "ws://localhost:9000/events?token=static-token"; // WebSocket URL with token in query parameter
+// Minimal Relay client example — the wire contract is the SDK (docs/api.md).
+// Native fetch + WebSocket only; each function maps onto one v1 endpoint/frame.
 
-let socket: WebSocket | null = null; // Declare WebSocket connection variable
+const CONTROL = process.env.RELAY_URL ?? "http://127.0.0.1:8000";
+const CAPTURE = process.env.RELAY_CAPTURE_URL ?? "http://127.0.0.1:8001";
 
-// Function to initiate an HTTP request to the Go server (no auth required)
-async function initiateConnection() {
-  try {
-    // Make a GET request to the Go relay server without Authorization header
-    const response = await fetch(relayUrl, {
-      method: "GET",
-    });
+type Envelope = Record<string, unknown>;
+type From = "newest" | "oldest" | number;
 
-    if (response.ok) {
-      console.log("Successfully connected to Go relay server");
-
-      // Now, initiate the WebSocket connection to the Go WebSocket server
-      socket = new WebSocket(socketUrl);
-
-      // WebSocket open event
-      socket.onopen = () => {
-        console.log("Connected to Go WebSocket server");
-        // Now you can send sample events to the Go server
-        sendSampleEvents();
-      };
-
-      // WebSocket message event (handling messages from Go WebSocket server)
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("Message received from Go WebSocket server:", data);
-      };
-
-      // WebSocket error event
-      socket.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
-      // WebSocket close event
-      socket.onclose = () => {
-        console.log("Disconnected from Go WebSocket server");
-      };
-    } else {
-      console.error(
-        "Failed to connect to Go relay server:",
-        response.statusText
-      );
-    }
-  } catch (error) {
-    console.error("Error during connection to Go relay server:", error);
-  }
+/** PUT /api/channels/{name} — idempotent create-or-update. */
+export async function createChannel(name: string): Promise<Envelope> {
+  const res = await fetch(`${CONTROL}/api/channels/${name}`, { method: "PUT" });
+  if (!res.ok) throw new Error(`createChannel(${name}): HTTP ${res.status}`);
+  return res.json();
 }
 
-// Function to send sample events to the Go WebSocket server
-function sendSampleEvents() {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    // Example event 1: A sample GET request
-    const event1 = {
-      method: "GET",
-      url: "/api/example1",
-      data: { message: "Sample GET request event" },
-    };
-    socket.send(JSON.stringify(event1));
-    console.log("Sent event 1:", event1);
+/** Capture-plane URL for a channel — request anything here, relay records it. */
+export const captureUrl = (name: string, suffix = ""): string =>
+  `${CAPTURE}/c/${name}${suffix}`;
 
-    // Example event 2: A sample POST request
-    const event2 = {
-      method: "POST",
-      url: "/api/example2",
-      data: { message: "Sample POST request event" },
-    };
-    socket.send(JSON.stringify(event2));
-    console.log("Sent event 2:", event2);
+/** GET /ws — send a subscribe frame, receive event envelopes. Returns unsubscribe fn. */
+export function subscribe(
+  channel: string,
+  from: From,
+  onEvent: (event: Envelope) => void,
+): () => void {
+  const ws = new WebSocket(CONTROL.replace(/^http/, "ws") + "/ws");
+  const id = crypto.randomUUID();
 
-    // Example event 3: A custom message with random data
-    const event3 = {
-      method: "CUSTOM",
-      url: "/api/custom",
-      data: { message: "Sample custom event", timestamp: Date.now() },
-    };
-    socket.send(JSON.stringify(event3));
-    console.log("Sent event 3:", event3);
-  } else {
-    console.error("WebSocket is not open, cannot send events");
-  }
+  ws.onopen = () =>
+    ws.send(JSON.stringify({ v: 1, type: "subscribe", id, channel, from }));
+  ws.onmessage = (m) => {
+    const frame = JSON.parse(String(m.data));
+    if (frame.type === "event") onEvent(frame.event);
+    else if (frame.type === "error")
+      console.error(`subscribe(${channel}) rejected:`, frame.error?.code);
+  };
+  return () => {
+    try {
+      ws.send(JSON.stringify({ v: 1, type: "unsubscribe", id, channel }));
+      ws.close();
+    } catch { /* already closed */ }
+  };
 }
 
-// Initiate connection to the Go relay server
-initiateConnection();
+/** POST /api/replay — send a stored event to a target origin, optionally re-signed. */
+export async function replay(
+  eventId: string,
+  targetUrl: string,
+  opts: { profile?: string; timeoutMs?: number } = {},
+): Promise<{ sent_event: Envelope; delivery: Record<string, unknown> }> {
+  const res = await fetch(`${CONTROL}/api/replay`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      target_url: targetUrl,
+      source: { event_id: eventId },
+      timeout_ms: opts.timeoutMs ?? 10_000,
+      ...(opts.profile && { signing: { profile: opts.profile } }),
+    }),
+  });
+  if (!res.ok) throw new Error(`replay(${eventId}): HTTP ${res.status}`);
+  return res.json();
+}
+
+// Demo: create a channel, subscribe from the oldest buffered event, fire one
+// webhook through the capture URL, print the envelope as it arrives.
+async function main(): Promise<void> {
+  await createChannel("demo");
+
+  const unsubscribe = subscribe("demo", "oldest", (event) => {
+    console.log("received:", JSON.stringify(event, null, 2));
+    unsubscribe();
+  });
+
+  const ack = await fetch(captureUrl("demo"), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ hello: "relay" }),
+  }).then((r) => r.json());
+  console.log("capture ack:", ack);
+
+  // With a real app listening somewhere, re-fire the captured event, re-signed:
+  // await replay(ack.event_id, "http://localhost:3000/hooks", { profile: "stripe-dev" });
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});

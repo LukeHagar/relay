@@ -1,0 +1,50 @@
+{
+  "v": 1,
+  "provider": "slack",
+  "name": "message.channels",
+  "description": "A message was posted to a channel (Events API)",
+  "signing_hint": "slack",
+  "request": {
+    "method": "POST",
+    "path": "/slack/events",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "token": "{{verification_token}}",
+      "team_id": "T1DC2JH3J",
+      "context_team_id": "T1DC2JH3J",
+      "context_enterprise_id": null,
+      "api_app_id": "A0123456789",
+      "event": {
+        "client_msg_id": "{{uuid}}",
+        "type": "message",
+        "text": "{{text}}",
+        "user": "{{user}}",
+        "ts": "1692600000.000100",
+        "blocks": [
+          {
+            "type": "rich_text",
+            "block_id": "R1",
+            "elements": [
+              { "type": "rich_text_section", "elements": [ { "type": "text", "text": "{{text}}" } ] }
+            ]
+          }
+        ],
+        "team": "T1DC2JH3J",
+        "channel": "{{channel_id}}",
+        "event_ts": "1692600000.000100",
+        "channel_type": "channel"
+      },
+      "type": "event_callback",
+      "event_time": "{{now_unix}}",
+      "authed_users": ["{{user}}"]
+    }
+  },
+  "defaults": {
+    "vars": {
+      "verification_token": "xyzz0WbapA4vBCDEFasx0q6G",
+      "text": "Deploy finished :rocket:",
+      "user": "U2CERLKJA",
+      "channel_id": "G8PSS9T3V"
+    }
+  }
+}

@@ -1,0 +1,196 @@
+openapi: 3.1.0
+info:
+  title: Relay Engine API
+  version: "1"
+  description: >
+    Wire contract for the Relay engine — capture, inspect, and replay webhooks.
+    The capture plane (default :8001) is documented separately in docs/api.md §3.3;
+    this spec covers the control plane. Subscriptions use WebSocket (/ws) and SSE
+    (/api/channels/{name}/sse) and are described in docs/api.md §5.
+servers:
+  - url: http://127.0.0.1:8000
+security: []   # set --token to require `Authorization: Bearer` on every route below
+components:
+  schemas:
+    Envelope:
+      type: object
+      required: [v, id, channel, seq, received_at, method, path, headers, body, body_encoding, truncated]
+      properties:
+        v: { type: integer, const: 1 }
+        id: { type: string, description: ULID, pattern: "[0-9A-HJKMNP-TV-Z]{26}" }
+        channel: { type: string }
+        host: { type: [string, "null"] }
+        seq: { type: integer, format: int64 }
+        received_at: { type: string, description: RFC3339 UTC, milliseconds }
+        method: { type: string }
+        path: { type: string, description: faithful wire path (or channel-root suffix locally) }
+        query: { type: [string, "null"] }
+        headers:
+          type: array
+          items: { type: array, items: { type: string }, minItems: 2, maxItems: 2 }
+        body: { type: string }
+        body_encoding: { type: string, enum: [utf8, base64] }
+        truncated: { type: boolean }
+        status_sent: { type: [integer, "null"], nullable: true }
+        remote_addr: { type: [string, "null"] }
+    ChannelConfig:
+      type: object
+      properties:
+        response_mode: { type: string, enum: [ack, echo, static], default: ack }
+        static_response:
+          type: object
+          properties:
+            status: { type: integer }
+            headers: { type: array, items: { type: array, items: { type: string } } }
+            body: { type: string }
+        auth:
+          type: [object, "null"]
+          properties: { bearer_env: { type: string } }
+        buffer:
+          type: object
+          properties:
+            max_events: { type: integer, default: 1000 }
+            max_age_s: { type: integer, default: 86400 }
+        rate_limit:
+          type: object
+          properties:
+            burst: { type: integer, default: 300 }
+            refill_per_s: { type: integer, default: 100 }
+        forward:
+          type: array
+          items:
+            type: object
+            required: [url]
+            properties:
+              url: { type: string }
+              profile: { type: string }
+              headers: { type: array, items: { type: array, items: { type: string } } }
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+paths:
+  /healthz:
+    get:
+      summary: Liveness
+      responses: { "200": { description: ok } }
+  /readyz:
+    get:
+      summary: Readiness (includes durable-layer probe)
+      responses: { "200": { description: ready }, "503": { description: not ready } }
+  /api/templates:
+    get:
+      summary: List bundled and user template fixtures
+      responses: { "200": { description: templates } }
+  /api/signing-profiles:
+    get:
+      summary: List configured signing profile names
+      responses: { "200": { description: profile names } }
+      summary: Readiness (includes durable-layer probe)
+      responses: { "200": { description: ready }, "503": { description: not ready } }
+  /api/channels:
+    get:
+      summary: List channels
+      responses: { "200": { description: descriptors } }
+  /api/channels/{name}:
+    put:
+      summary: Create or update a channel (idempotent)
+      parameters: [{ name: name, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/ChannelConfig" } }
+      responses:
+        "201": { description: created }
+        "200": { description: updated }
+        "402": { description: quota exceeded (billing) }
+    get:
+      summary: Channel descriptor
+      responses: { "200": { description: descriptor }, "404": { description: no such channel } }
+    delete:
+      summary: Delete channel (drops buffer + subscriptions)
+      responses: { "204": { description: deleted } }
+  /api/channels/{name}/events:
+    get:
+      summary: History ascending above cursor
+      parameters:
+        - { name: name, in: path, required: true, schema: { type: string } }
+        - { name: cursor, in: query, schema: { type: integer, format: int64 } }
+        - { name: limit, in: query, schema: { type: integer, default: 1000 } }
+      responses: { "200": { description: events } }
+  /api/channels/{name}/sse:
+    get:
+      summary: Server-Sent Events stream (backlog then live)
+      parameters:
+        - { name: name, in: path, required: true, schema: { type: string } }
+        - { name: from, in: query, schema: { oneOf: [{ type: string }, { type: integer }] } }
+      responses: { "200": { description: text/event-stream } }
+  /ws:
+    get:
+      summary: WebSocket subscriptions (JSON frames per docs/api.md §5.1)
+      responses: { "101": { description: upgrade } }
+  /api/replay:
+    post:
+      summary: Replay stored/template/inline event with optional signing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_url, source]
+              properties:
+                target_url: { type: string, description: origin or base URL; source path appends }
+                timeout_ms: { type: integer, default: 10000 }
+                source:
+                  description: Exactly one variant must be present (key acts as the discriminator).
+                  oneOf:
+                    - { type: object, required: [event_id], additionalProperties: false,
+                        properties: { event_id: { type: string } } }
+                    - { type: object, required: [template], additionalProperties: false,
+                        properties: { template: { type: string } } }
+                    - { type: object, required: [inline], additionalProperties: false,
+                        properties: { inline: { type: object } } }
+                overrides:
+                  type: object
+                  properties:
+                    method: { type: string }
+                    path: { type: string }
+                    query: { type: string }
+                    headers: { type: array, items: { type: array, items: { type: string } } }
+                    body: { type: string }
+                vars: { type: object, additionalProperties: true }
+                signing:
+                  type: object
+                  properties:
+                    profile: { type: string }
+                    scheme: { type: string, enum: [github, stripe, slack, shopify, twilio] }
+      responses:
+        "200":
+          description: sent_event envelope plus real delivery outcome
+        "402": { description: quota exceeded }
+  /api/billing/plans:
+    get:
+      summary: Plan catalog and current subscription (billing builds only)
+      responses: { "200": { description: catalog } }
+  /api/billing/subscription:
+    get:
+      summary: Current subscription state
+      responses: { "200": { description: subscription } }
+  /api/billing/checkout:
+    post:
+      summary: Create Stripe Checkout Session
+      responses:
+        "200": { description: "{ url }" }
+        "422": { description: billing not configured }
+  /api/billing/webhook:
+    post:
+      summary: Stripe webhook receiver (Stripe-Signature verified)
+      security: []
+      responses:
+        "200": { description: applied }
+        "400": { description: invalid signature or stale timestamp }

@@ -1,6 +1,7 @@
 {
-  "dependencies": {},
-  "devDependencies": {
-    "socket.io-client": "^4.8.0"
+  "name": "relay-client-example",
+  "private": true,
+  "scripts": {
+    "start": "bun run main.ts"
   }
 }
